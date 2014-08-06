@@ -1,0 +1,14 @@
+global_costmap:
+  global_frame: map
+  robot_base_frame: base_footprint
+  update_frequency: 0.1
+  publish_frequency: 0.2
+  static_map: true
+  rolling_window: false
+  width: 10.0
+  height: 10.0
+  resolution: 0.1
+  max_obstacle_height: 10.0
+  min_obstacle_height: 0.0
+  obstacle_range: 1.0
+

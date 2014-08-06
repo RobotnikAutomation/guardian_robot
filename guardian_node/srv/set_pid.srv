@@ -1,0 +1,14 @@
+# P Linear speed
+float32 p_linear_divisor
+# P angular speed
+float32 p_angular_divisor
+# I linear constant
+float32 i_linear
+# I angular constant
+float32 i_angular
+# Error saturation on I for linear velocity
+float32 i_error_sat_linear
+# Error saturation on I for angular velocity
+float32 i_error_sat_angular
+---
+bool ret

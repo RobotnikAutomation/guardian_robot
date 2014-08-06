@@ -1,0 +1,21 @@
+<package>
+  <name>guardian_complete</name>
+  <version>0.1.0</version>
+  <description>guardian_complete</description>
+  <maintainer email="rnavarro@robotnik.es">Román Navarro</maintainer>
+
+  <author email="rnavarro@robotnik.es">Román Navarro</author>
+  <license>BSD</license>
+  <url>http://ros.org/wiki/guardian_complete</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>std_msgs</run_depend>
+
+</package>
+
+

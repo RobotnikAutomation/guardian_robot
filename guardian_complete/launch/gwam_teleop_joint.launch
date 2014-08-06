@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Launches guardian  pad -->
+  <include file="$(find guardian_pad)/launch/guardian_pad.launch" />
+  
+ <!-- WAM Teleop Node JOINT CONTROL -->
+  <node pkg="wam_joint_teleop" type="wam_joint_teleop" name="wam_joint_teleop" output="screen"/>
+
+</launch>
+

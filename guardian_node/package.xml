@@ -1,0 +1,28 @@
+<package>
+  <name>guardian_node</name>
+  <version>0.1.0</version>
+  <description>guardian_node</description>
+  <maintainer email="rnavarro@robotnik.es">Román Navarro</maintainer>
+  <maintainer email="mbeneto@robotnik.es">Marc Benetó</maintainer>
+  <maintainer email="rguzman@robotnik.es">Roberto Guzmán</maintainer>
+
+  <author email="rnavarro@robotnik.es">Román Navarro</author>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>diagnostic_updater</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>nav_msgs</run_depend>
+  <run_depend>diagnostic_updater</run_depend>
+
+  <export>
+	<cpp cflags="-I${prefix}/include  -I${prefix}/srv_gen/cpp/include -I${prefix}/msg_gen/cpp/include"/>
+  </export>
+
+</package>

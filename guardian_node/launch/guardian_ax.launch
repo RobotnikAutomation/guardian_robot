@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+	
+	<node type="guardian_node_ax" name="guardian_node" pkg="guardian_node" output="screen">
+		<param name="motor_dev" value="/dev/ttyS1" type="string"/>
+		<param name="modbus_io_topic" value="/modbus_io/input_output" type="string"/>
+		<param name="max_linear_speed" value="1.5" type="double"/> <!-- m/s -->
+		<param name="max_angular_speed" value="60.0" type="double"/> <!-- degrees/s -->
+		<rosparam command="load" file="$(find guardian_node)/launch/guardian_conf.yaml" />
+	</node>
+
+</launch>

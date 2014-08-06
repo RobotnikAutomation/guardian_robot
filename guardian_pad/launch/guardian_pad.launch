@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<launch>
+
+ <!-- joy node -->
+  <node name="joy" pkg="joy" type="joy_node" respawn="true">
+    <param name="dev" type="string" value="/dev/input/js0" />
+    <param name="deadzone" value="0.12" />
+  </node>
+
+  <!-- Parameters -->
+	<param name="cmd_topic_vel" value="/guardian_node/command" type="string"/>
+	<param name="cmd_service_io" value="/modbus_io/write_digital_output" type="string"/>
+	<!--<param name="cmd_service_io" value="/modbus_io/input_output" type="string"/>-->
+	<param name="cmd_topic_ptz" value="/axis/cmd_ptz" type="string"/>
+    <rosparam command="load" file="$(find guardian_pad)/launch/ps3.yaml" />
+  <node name="guardian_pad" pkg="guardian_pad" type="guardian_pad" output="screen"/>
+  
+  <!-- node name="guardian_pad" pkg="guardian_pad" type="guardian_pad" args="load thrustmaster.yaml" / --> 
+  <!-- node name="guardian_pad" pkg="guardian_pad" type="guardian_pad" args="load logitech.yaml" / --> 
+  <!-- node name="guardian_pad" pkg="guardian_pad" type="guardian_pad" args="load ps3.yaml" / --> 
+  
+</launch>
+

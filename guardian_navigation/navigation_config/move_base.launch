@@ -1,0 +1,15 @@
+<launch>  
+
+<!-- Run move_base -->
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <remap from="odom" to="robot_pose_ekf/odom_combined" />
+    <remap from="cmd_vel" to="guardian_node/command" />
+    <!--remap from="odom" to="odom" /-->
+    <rosparam file="$(find guardian_navigation)/navigation_config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find guardian_navigation)/navigation_config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find guardian_navigation)/navigation_config/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find guardian_navigation)/navigation_config/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find guardian_navigation)/navigation_config/base_local_planner_params.yaml" command="load" />
+  </node>
+
+</launch>

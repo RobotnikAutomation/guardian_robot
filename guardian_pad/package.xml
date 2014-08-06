@@ -1,0 +1,35 @@
+<package>
+  <name>guardian_pad</name>
+  <version>0.1.0</version>
+  <description>
+     guardian_pad. Component to teleoperate the robot through a joystick
+  </description>
+  <author email="rnavarro@robotnik.es">Román Navarro</author>
+
+  <license>BSD</license>
+
+  <maintainer email="rnavarro@robotnik.es">Román Navarro</maintainer>
+  <maintainer email="rguzman@robotnik.es">Roberto Guzmán</maintainer>
+  <maintainer email="mbeneto@robotnik.es">Marc Benetó</maintainer>
+
+  <url>http://ros.org/wiki/guardian_pad</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>diagnostic_updater</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>std_srvs</build_depend>
+  <build_depend>robotnik_msgs</build_depend>
+    
+  <run_depend>roscpp</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>diagnostic_updater</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>std_srvs</run_depend>
+  <run_depend>robotnik_msgs</run_depend>
+
+</package>
+
+

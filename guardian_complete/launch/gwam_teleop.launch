@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Launches guardian  pad -->
+  <include file="$(find guardian_pad)/launch/guardian_pad.launch" />
+  
+  <!-- WAM Teleop Node CARTESIAN CONTROL -->
+  <node pkg="wam_teleop" type="wam_joystick_teleop" name="wam_joystick_teleop" output="screen"/>
+
+
+</launch>
+

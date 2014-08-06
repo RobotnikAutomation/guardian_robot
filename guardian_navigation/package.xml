@@ -1,0 +1,22 @@
+<package>
+  <name>guardian_navigation</name>
+  <version>0.1.0</version>
+  <description>This package contains examples of configuration files needed to execute the AMCL and SLAM navigation algorithms in the robot. </description>
+  <maintainer email="rnavarro@robotnik.es">Román Navarro</maintainer>
+  <maintainer email="rguzman@robotnik.es">Roberto Guzmán</maintainer>
+  <maintainer email="mbeneto@robotnik.es">Marc Benetó</maintainer>
+
+  <author email="mbeneto@robotnik.es">Marc Benetó</author>
+  <license>BSD</license>
+
+  <url>http://ros.org/wiki/guardian_navigation</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>move_base</build_depend>
+
+  <run_depend>move_base</run_depend>
+
+</package>
+
+
