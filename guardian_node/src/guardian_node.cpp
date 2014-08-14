@@ -67,7 +67,7 @@
 
 std::string port;
 
-guardian_controller* guardian_hw_interface; 						// Instance to the interface
+guardian_controller* guardian_hw_interface; 		// Instance to the interface
 guardian_node::guardian_state robot_state;			// Guardian's state message
 double v, w = 0.0; 									// Callback cmd vel variables
 std::string sOdometryType_; 						// Type of odometry used by the robot
@@ -303,12 +303,21 @@ int main(int argc, char** argv){
 	pn.param("max_linear_speed", max_linear_speed_,  GUARDIAN_DEFAULT_MAX_LINEAR_SPEED);
 	pn.param("max_angular_speed", max_angular_speed_,  GUARDIAN_DEFAULT_MAX_ANGULAR_SPEED);
 	pn.param("odometry_type", sOdometryType_, sDefaultOdometryType);
-	pn.param("diameter_wheels", diameter_wheels_,  MOTOR_DIAMETER_WHEEL);
-	pn.param("distance_between_wheels", distance_between_wheels_,  MOTOR_D_TRACKS_M);
+
+    if (sOdometryType_ == "tracks")
+    {
+        pn.param("diameter_wheels", diameter_wheels_,  MOTOR_DIAMETER_TRACK_WHEEL);
+        pn.param("distance_between_wheels", distance_between_wheels_,  MOTOR_D_TRACKS_M);
+    }
+    else
+    {
+        pn.param("diameter_wheels", diameter_wheels_,  MOTOR_DIAMETER_WHEEL);
+        pn.param("distance_between_wheels", distance_between_wheels_,  MOTOR_D_WHEELS_M);
+    }
 	pn.param("encoder_config", encoder_config_, ROBOTEQ_DEFAULT_ENCODER_CONF);
 	pn.param("encoder_dir", encoder_dir_, ROBOTEQ_DEFAULT_ENCODER_DIR);
 	pn.param("angular_dir", angular_dir_, ROBOTEQ_DEFAULT_ANGULAR_DIR);
-	pn.param("publish_tf", publish_tf_, publish_tf_);
+    pn.param("publish_tf", publish_tf_, true);
 	pn.param("desired_freq", desired_freq_, 20.0);
 	pn.param<std::string>("back_left_wheel_joint_name", back_left_wheel_joint_name_, "joint_back_left_wheel");
 	pn.param<std::string>("back_right_wheel_joint_name", back_right_wheel_joint_name_, "joint_back_right_wheel");
@@ -333,8 +342,6 @@ int main(int argc, char** argv){
 		// Applies the configuration to the driver
 		// For odom using tracks, the configuration is pre-defined by default
 		if(!sOdometryType_.compare(ODOMTYPE_TRACKS)){
-			distance_between_wheels_ = MOTOR_DIAMETER_TRACK_WHEEL;
-			diameter_wheels_ = MOTOR_DIAMETER_TRACK_WHEEL;	
 			distance_between_wheels_ *= ERROR_D_2;	// Applying error factor for odom calcs
 			guardian_hw_interface->SetConversionFactor(MOTOR_GEARBOX_TO_TRACK_FACTOR);
 		}
@@ -496,15 +503,14 @@ int main(int argc, char** argv){
 		// Gets the current robot rpms
 		guardian_hw_interface->GetRPM(&left_rpm, &right_rpm);
 		// 1 rev -> 3.1416 rads
-		// 1 min -> 3600 segs
+        // 1 min -> 60 segs
 		// desired_freq_
-		inc_left_wheel = ((left_rpm * 3.1416)/3600)/desired_freq_;
-		inc_right_wheel = ((right_rpm * 3.1416)/3600)/desired_freq_;
+		inc_left_wheel = ((left_rpm * 3.1416)/60)/desired_freq_;
+		inc_right_wheel = ((right_rpm * 3.1416)/60)/desired_freq_;
 		robot_joints_.position[0] = robot_joints_.position[0] + inc_left_wheel;
 		robot_joints_.position[1] = robot_joints_.position[1] + inc_left_wheel;
 		robot_joints_.position[2] = robot_joints_.position[2] + inc_right_wheel;
 		robot_joints_.position[3] = robot_joints_.position[3] + inc_right_wheel;
-		
 
 		joint_state_pub_.publish( robot_joints_ );
 

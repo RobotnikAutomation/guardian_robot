@@ -469,9 +469,9 @@ double guardian_controller::CalculateRPM(double *rpm_left, double *rpm_right){
 			bfirst = false;
 		}else{
 			inc_left_counts = robot_data.encoder_left - robot_data.last_encoder_left;
-		    	inc_right_counts = robot_data.encoder_right - robot_data.last_encoder_right;
-		    	robot_data.last_encoder_left = robot_data.encoder_left;
-		    	robot_data.last_encoder_right = robot_data.encoder_right;
+		    inc_right_counts = robot_data.encoder_right - robot_data.last_encoder_right;
+		    robot_data.last_encoder_left = robot_data.encoder_left;
+		    robot_data.last_encoder_right = robot_data.encoder_right;
 		}
         //pthread_mutex_unlock(&mutex_encoders);
         }
@@ -535,8 +535,8 @@ void guardian_controller::UpdateOdometry(){
     robot_data.actSpeedRmps = v_right_mps;
    // ROS_INFO("guardian_controller::CalcRPM OK. v_left_mps = %lf,  v_right_mps = %lf",v_left_mps,v_right_mps);
 	
-	//Velocity
-	robot_pose.va = angularSpeedRads;
+	//Velocity //this is converting velocity to the odom frame
+	/*robot_pose.va = angularSpeedRads;
 	robot_pose.vx = linearSpeedMps *  cos(robot_pose.pa);
 	robot_pose.vy = linearSpeedMps *  sin(robot_pose.pa);
 	//ROS_INFO("guardian_controller::CalcRPM OK. pa = %lf,  w = %lf, f = %lf", robot_pose.pa, angularSpeedRads, fSamplePeriod);
@@ -550,7 +550,26 @@ void guardian_controller::UpdateOdometry(){
 	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
 
 	robot_data.rpm_right = (float)fVelocityRightRpm;   // Motor RPM
-	robot_data.rpm_left  = (float)fVelocityLeftRpm;
+	robot_data.rpm_left  = (float)fVelocityLeftRpm;*/
+
+    //Velocity 
+    //we want velocity in frame base_footprint 
+    	robot_pose.va = angularSpeedRads;
+    	robot_pose.vx = linearSpeedMps ; //*  cos(robot_pose.pa); //robot only moves in x coordinate
+    	robot_pose.vy = 0; //linearSpeedMps *  sin(robot_pose.pa);
+    	//ROS_INFO("guardian_controller::CalcRPM OK. pa = %lf,  w = %lf, f = %lf", robot_pose.pa, angularSpeedRads, fSamplePeriod);
+
+    	//Position
+    	robot_pose.pa += angularSpeedRads * fSamplePeriod;
+    	radnorm(&robot_pose.pa);
+
+    //but the pose we want in odom frame, so the multiplication (cos, sin) is done here
+    	robot_pose.px += robot_pose.vx * cos(robot_pose.pa)* fSamplePeriod;
+    	robot_pose.py += robot_pose.vx * sin(robot_pose.pa)* fSamplePeriod;
+    	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
+
+    	robot_data.rpm_right = (float)fVelocityRightRpm;   // Motor RPM
+    	robot_data.rpm_left  = (float)fVelocityLeftRpm;
 
 }
 
