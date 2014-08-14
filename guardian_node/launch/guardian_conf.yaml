@@ -9,3 +9,4 @@ back_left_wheel_joint_name: joint_back_left_wheel
 back_right_wheel_joint_name: joint_back_right_wheel 
 front_left_wheel_joint_name: joint_front_left_wheel 
 front_right_wheel_joint_name: joint_front_right_wheel 
+error_factor: 1.25

@@ -260,7 +260,7 @@ int main(int argc, char** argv){
 	ros::NodeHandle n, pn("~");
 	pose robot_pose;	// Position & velocity from the odometry
 	double max_linear_speed_, max_angular_speed_;
-	double diameter_wheels_, distance_between_wheels_;	// Diameter of the wheels and distance between them
+	double diameter_wheels_, distance_between_wheels_, error_factor_;	// Diameter of the wheels and distance between them
 	sensor_msgs::JointState robot_joints_;
 	double desired_freq_ = 0;
 	
@@ -308,11 +308,13 @@ int main(int argc, char** argv){
     {
         pn.param("diameter_wheels", diameter_wheels_,  MOTOR_DIAMETER_TRACK_WHEEL);
         pn.param("distance_between_wheels", distance_between_wheels_,  MOTOR_D_TRACKS_M);
+        pn.param("error_factor", error_factor_, ERROR_D_2);
     }
     else
     {
         pn.param("diameter_wheels", diameter_wheels_,  MOTOR_DIAMETER_WHEEL);
         pn.param("distance_between_wheels", distance_between_wheels_,  MOTOR_D_WHEELS_M);
+        pn.param("error_factor", error_factor_, ERROR_D_1);
     }
 	pn.param("encoder_config", encoder_config_, ROBOTEQ_DEFAULT_ENCODER_CONF);
 	pn.param("encoder_dir", encoder_dir_, ROBOTEQ_DEFAULT_ENCODER_DIR);
@@ -341,13 +343,16 @@ int main(int argc, char** argv){
   	}else{
 		// Applies the configuration to the driver
 		// For odom using tracks, the configuration is pre-defined by default
-		if(!sOdometryType_.compare(ODOMTYPE_TRACKS)){
+		/*if(!sOdometryType_.compare(ODOMTYPE_TRACKS)){
 			distance_between_wheels_ *= ERROR_D_2;	// Applying error factor for odom calcs
 			guardian_hw_interface->SetConversionFactor(MOTOR_GEARBOX_TO_TRACK_FACTOR);
 		}
 		else{
 			distance_between_wheels_ *= ERROR_D_1;	// Applying error factor for odom calcs
-		}
+		}*/
+  		
+  		distance_between_wheels_ *= error_factor_;
+  		
 		// Sets the max. speed read from the param
 		guardian_hw_interface->SetSpeedLimits(max_linear_speed_, DTOR(max_angular_speed_));
 		guardian_hw_interface->SetMotorWheelParams(diameter_wheels_, distance_between_wheels_);
