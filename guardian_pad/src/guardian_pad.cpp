@@ -35,6 +35,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
 #include <geometry_msgs/Twist.h>
+//guardian_controller* guardian_hw_interface; 		// Instance to the interface
 
 // Optional (modbus or rly_08)
 // #include <modbus_io/write_digital_output.h>
@@ -244,10 +245,12 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	geometry_msgs::Twist vel;
 	robotnik_msgs::ptz ptz;
 	bool ptzEvent = false;
+	bool stop_pub_cmd = false; //
 
 	//ROS_ERROR("EVENT JOY");	
   	// Actions dependant on dead-man button
  	if (joy->buttons[dead_man_button_] == 1) {
+ 		bEnable = true;
 		//ROS_ERROR("GuardianPan::padCallback: DEADMAN button %d", dead_man_button_);
 		// Set the current velocity level
 		if ( joy->buttons[speed_down_button_] == 1 ){
@@ -401,6 +404,8 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
    	else {
 		vel.angular.x = 0.0;	vel.angular.y = 0.0; vel.angular.z = 0.0;
 		vel.linear.x = 0.0; vel.linear.y = 0.0; vel.linear.z = 0.0;
+		stop_pub_cmd = true; //we still want to send vel = 0 to stop the robot
+		//bEnable = false;
 	}
 
 	sus_joy_freq->tick();	// Ticks the reception of joy events
@@ -411,6 +416,8 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 			ptz_pub_.publish(ptz);
 		vel_pub_.publish(vel);
 		pub_command_freq->tick();
+		if (stop_pub_cmd) //but after send vel 0 we don't want to send more
+			bEnable = false;
 	}
 	
 }
