@@ -20,7 +20,8 @@
 
 using namespace std;
 
-
+int max_left = 0;
+int max_right = 0;
 /*!	\fn guardian_controller::guardian_controller(const char *device, double hz)
  * 	\brief Public parmetrized constructor
 */
@@ -503,9 +504,12 @@ double guardian_controller::CalculateRPM(double *rpm_left, double *rpm_right){
     }
 	
 	//	Calcs rev per min for each motor
+/*
 	*rpm_left= rev_per_min_left = (inc_left_counts/secs)*dCountsPerSec_To_RevPerMin;
 	*rpm_right = rev_per_min_right = (inc_right_counts/secs)*dCountsPerSec_To_RevPerMin;
-
+*/
+	*rpm_left= (inc_left_counts)* DISTANCE_PER_COUNT; //now is not rpm, is delta_distance. ToDo: create a new function Calculate_deltaD() and not use CalculateRPM()
+	*rpm_right= (inc_right_counts)* DISTANCE_PER_COUNT;
 
 	//sprintf(aux, "guardian_controller::CalculateRPM: Rpm left = %lf(inc encoder = %d)\t Rpm Right = %lf(inc encoder = %d)\t time: diff= %lf secs\n", rev_per_min_left, inc_left_counts,rev_per_min_right,inc_right_counts,secs);
 	
@@ -517,16 +521,24 @@ double guardian_controller::CalculateRPM(double *rpm_left, double *rpm_right){
 	* Updates robot's odometry
 */
 void guardian_controller::UpdateOdometry(){
-	double fVelocityLeftRpm=0.0;
-	double fVelocityRightRpm=0.0;
+	/*double fVelocityLeftRpm=0.0;
+	double fVelocityRightRpm=0.0;*/
+	double fVelocityLeft=0.0;
+	double fVelocityRight=0.0;
 	double v_left_mps = 0.0, v_right_mps = 0.0;
 	double fSamplePeriod = 0.0; // Default sample period
 
-	fSamplePeriod= CalculateRPM(&fVelocityLeftRpm,&fVelocityRightRpm); 
+	//fSamplePeriod= CalculateRPM(&fVelocityLeftRpm,&fVelocityRightRpm);
+	fSamplePeriod= CalculateRPM(&fVelocityLeft,&fVelocityRight);
 
 	// Convert velocities from rpm to m/s
-	v_left_mps = fVelocityLeftRpm * dRpmToWheelRpm * dWheelRpmToMps;
-	v_right_mps = fVelocityRightRpm * dRpmToWheelRpm * dWheelRpmToMps;
+	/* v_left_mps = fVelocityLeftRpm * dRpmToWheelRpm * dWheelRpmToMps;
+	v_right_mps = fVelocityRightRpm * dRpmToWheelRpm * dWheelRpmToMps; */
+	
+	//already in m/s
+	v_left_mps = fVelocityLeft/fSamplePeriod;
+	v_right_mps = fVelocityRight/fSamplePeriod ;
+
 	linearSpeedMps = (v_right_mps + v_left_mps) / 2.0;			   		    // m/s
 	angularSpeedRads = (v_right_mps - v_left_mps) / fDistanceBetweenWheels;    //rad/s
 
@@ -568,8 +580,11 @@ void guardian_controller::UpdateOdometry(){
     	robot_pose.py += robot_pose.vx * sin(robot_pose.pa)* fSamplePeriod;
     	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
 
-    	robot_data.rpm_right = (float)fVelocityRightRpm;   // Motor RPM
-    	robot_data.rpm_left  = (float)fVelocityLeftRpm;
+    	//robot_data.rpm_right = (float)fVelocityRightRpm;// Motor RPM
+    	//robot_data.rpm_left  = (float)fVelocityLeftRpm;
+
+    	robot_data.rpm_right = (float)fVelocityRight*dMpsToWheelRpm;  //now convert to rpm
+    	robot_data.rpm_left  = (float)fVelocityLeft*dMpsToWheelRpm;
 
 }
 

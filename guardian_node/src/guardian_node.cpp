@@ -48,6 +48,8 @@
 #include <diagnostic_updater/publisher.h>
 #include <boost/assign.hpp>
 
+#include <tf/LinearMath/Vector3.h>
+#include <tf/LinearMath/Quaternion.h>
 
 #define		GUARDIAN_DEFAULT_MAX_LINEAR_SPEED	1.5		// m/s
 #define		GUARDIAN_DEFAULT_MAX_ANGULAR_SPEED	40.0	// degrees/s
@@ -244,6 +246,9 @@ void check_powersupply(diagnostic_updater::DiagnosticStatusWrapper &stat)
 			stat.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Low battery Level.");
 		}else{
 			stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "Extremely low battery Level. You should charge the battery.");
+			/*std::cout << RED <<"**************************************************" << RESET << std::endl;
+			std::cout << RED <<"********** Extremely low battery Level: " << batt << "**********" << RESET << std::endl;
+			std::cout << RED <<"**************************************************" << RESET << std::endl;*/		
 		}
 
 		stat.add("Battery Voltage", volt); // Battery Voltage
@@ -270,7 +275,7 @@ int main(int argc, char** argv){
 	float left_rpm = 0.0, right_rpm = 0.0;
 	double inc_left_wheel = 0.0, inc_right_wheel = 0.0;
 	std::string back_left_wheel_joint_name_, back_right_wheel_joint_name_, front_left_wheel_joint_name_, front_right_wheel_joint_name_;
-	
+	bool invert_odom_tf_;
 	//
 	// The Updater class advertises to /diagnostics, and has a
 	// ~diagnostic_period parameter that says how often the diagnostics
@@ -326,6 +331,8 @@ int main(int argc, char** argv){
 	pn.param<std::string>("front_left_wheel_joint_name", front_left_wheel_joint_name_, "joint_front_left_wheel");
 	pn.param<std::string>("front_right_wheel_joint_name", front_right_wheel_joint_name_, "joint_front_right_wheel");
 	
+	pn.param("invert_odom_tf", invert_odom_tf_, false);
+
 	ROS_INFO("guardian_node::main: Motor dev = %s", sDevicePort.c_str());
 	ROS_INFO("guardian_node::main: Max Speed: v = %.2f m/s, w = %.2f d/s", max_linear_speed_, max_angular_speed_);
 	ROS_INFO("guardian_node::main: Odometry type: %s", sOdometryType_.c_str());
@@ -453,14 +460,37 @@ int main(int argc, char** argv){
 		if(publish_tf_){
 			//first, we'll publish the transform over tf
 			geometry_msgs::TransformStamped odom_trans;
-			odom_trans.header.stamp = current_time;
-			odom_trans.header.frame_id = "odom";
-			odom_trans.child_frame_id = "base_footprint"; // base_link
 
-			odom_trans.transform.translation.x = robot_pose.px;
-			odom_trans.transform.translation.y = robot_pose.py;
-			odom_trans.transform.translation.z = 0.0;
-			odom_trans.transform.rotation = odom_quat;
+			if (invert_odom_tf_){ //Invert odom transform
+				tf::Vector3 v(robot_pose.px, robot_pose.py, 0);
+				tf::Quaternion q;
+				tf::quaternionMsgToTF(odom_quat, q);
+				tf::Transform tf_temp(q,v);
+				tf_temp = tf_temp.inverse();
+
+				odom_trans.header.stamp = current_time;
+				odom_trans.header.frame_id = "base_footprint";
+				odom_trans.child_frame_id = "odom_inverted";
+
+				odom_trans.transform.translation.x = tf_temp.getOrigin().getX();
+				odom_trans.transform.translation.y = tf_temp.getOrigin().getY();
+				odom_trans.transform.translation.z = 0.0;
+
+				geometry_msgs::Quaternion odom_quat2;
+				tf::quaternionTFToMsg(tf_temp.getRotation(),odom_quat2);
+				odom_trans.transform.rotation = odom_quat2;
+			}
+			else{
+
+				odom_trans.header.stamp = current_time;
+				odom_trans.header.frame_id = "odom";
+				odom_trans.child_frame_id = "base_footprint";
+
+				odom_trans.transform.translation.x = robot_pose.px;
+				odom_trans.transform.translation.y = robot_pose.py;
+				odom_trans.transform.translation.z = 0.0;
+				odom_trans.transform.rotation = odom_quat;
+			}
 
 			//send the transform
 			odom_broadcaster.sendTransform(odom_trans);

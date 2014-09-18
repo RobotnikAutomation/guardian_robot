@@ -35,7 +35,6 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
 #include <geometry_msgs/Twist.h>
-//guardian_controller* guardian_hw_interface; 		// Instance to the interface
 
 // Optional (modbus or rly_08)
 // #include <modbus_io/write_digital_output.h>
