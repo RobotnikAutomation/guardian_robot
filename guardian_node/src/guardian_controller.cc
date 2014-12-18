@@ -20,7 +20,7 @@
 
 using namespace std;
 
-int max_left = 0;
+int max_left = 0; //apagar???
 int max_right = 0;
 /*!	\fn guardian_controller::guardian_controller(const char *device, double hz)
  * 	\brief Public parmetrized constructor
@@ -445,6 +445,78 @@ void guardian_controller::WriteMotorSpeed(int channel_a, int channel_b){
 
 }
 
+/*!	\fn double guardian_controller::CalculateDeltaDistance()
+	* Calculates distance travelled
+	* @return sample period in seconds
+*/
+double guardian_controller::CalculateDeltaDistance(double *delta_left, double *delta_right){
+	static bool first = true;
+		static struct timespec now, last;
+		int inc_left_counts = 0, inc_right_counts = 0;
+		double secs= 1.0 / threadData.dRealHz;
+		int diff= 0;
+		double rev_per_min_left = 0.0, rev_per_min_right=0.0;
+		static bool bfirst = true;
+
+
+		// ABSOLUTE ENCODERS
+		if(this->encoders_mode == GUARDIAN_CONTROLLER_ABSOLUTE_ENCODERS){
+	        //pthread_mutex_lock(&mutex_encoders);
+			if(bfirst){
+				inc_left_counts = 0;
+			    	inc_right_counts = 0;
+			    	robot_data.last_encoder_left = robot_data.encoder_left;
+			    	robot_data.last_encoder_right = robot_data.encoder_right;
+				bfirst = false;
+			}else{
+				inc_left_counts = robot_data.encoder_left - robot_data.last_encoder_left;
+			    inc_right_counts = robot_data.encoder_right - robot_data.last_encoder_right;
+			    robot_data.last_encoder_left = robot_data.encoder_left;
+			    robot_data.last_encoder_right = robot_data.encoder_right;
+			}
+	        //pthread_mutex_unlock(&mutex_encoders);
+	        }
+	    else {
+	    // RELATIVE ENCODERS
+	        //pthread_mutex_lock(&mutex_encoders);
+
+	            inc_left_counts = robot_data.encoder_left;
+	            inc_right_counts = robot_data.encoder_right;
+
+				if(abs(inc_left_counts) > GUARDIAN_CONTROLLER_MAX_ENC_INC) {	// Check wrong data
+	                ROS_ERROR("guardian_controller::CalculateRPM:Relative: error reading left encoder: inc = %d", inc_left_counts);
+					inc_left_counts = robot_data.last_encoder_left;
+				}else{
+					robot_data.last_encoder_left = robot_data.encoder_left;
+	            }
+
+				if(abs(inc_right_counts) > GUARDIAN_CONTROLLER_MAX_ENC_INC){	//En caso de que llegase un dato anómalo
+					ROS_ERROR("guardian_controller::CalculateRPM:Relative: error reading right encoder: inc = %d", inc_right_counts);
+					inc_right_counts = robot_data.last_encoder_right;
+				}else{
+					robot_data.last_encoder_right = robot_data.encoder_right;
+				}
+
+				robot_data.encoder_left = 0;
+				robot_data.encoder_right = 0;
+
+	        //pthread_mutex_unlock(&mutex_encoders);
+	    }
+
+		//	Calcs rev per min for each motor
+	/*
+		*rpm_left= rev_per_min_left = (inc_left_counts/secs)*dCountsPerSec_To_RevPerMin;
+		*rpm_right = rev_per_min_right = (inc_right_counts/secs)*dCountsPerSec_To_RevPerMin;
+	*/
+		*delta_left= (inc_left_counts)* DISTANCE_PER_COUNT;
+		*delta_right= (inc_right_counts)* DISTANCE_PER_COUNT;
+
+		//sprintf(aux, "guardian_controller::CalculateRPM: Rpm left = %lf(inc encoder = %d)\t Rpm Right = %lf(inc encoder = %d)\t time: diff= %lf secs\n", rev_per_min_left, inc_left_counts,rev_per_min_right,inc_right_counts,secs);
+
+		return secs;
+	}
+
+
 /*!	\fn double guardian_controller::CalculateRPM()
 	* Calculates RPM
 	* @return sample period in seconds
@@ -504,12 +576,9 @@ double guardian_controller::CalculateRPM(double *rpm_left, double *rpm_right){
     }
 	
 	//	Calcs rev per min for each motor
-/*
+
 	*rpm_left= rev_per_min_left = (inc_left_counts/secs)*dCountsPerSec_To_RevPerMin;
 	*rpm_right = rev_per_min_right = (inc_right_counts/secs)*dCountsPerSec_To_RevPerMin;
-*/
-	*rpm_left= (inc_left_counts)* DISTANCE_PER_COUNT; //now is not rpm, is delta_distance. ToDo: create a new function Calculate_deltaD() and not use CalculateRPM()
-	*rpm_right= (inc_right_counts)* DISTANCE_PER_COUNT;
 
 	//sprintf(aux, "guardian_controller::CalculateRPM: Rpm left = %lf(inc encoder = %d)\t Rpm Right = %lf(inc encoder = %d)\t time: diff= %lf secs\n", rev_per_min_left, inc_left_counts,rev_per_min_right,inc_right_counts,secs);
 	
@@ -517,10 +586,10 @@ double guardian_controller::CalculateRPM(double *rpm_left, double *rpm_right){
 }
 
 
-/*!	\fn void guardian_controller::UpdateOdometry()
-	* Updates robot's odometry
+/*!	\fn void guardian_controller::UpdateSimpleOdometry()
+	* Updates robot's odometry - only for tracks
 */
-void guardian_controller::UpdateOdometry(){
+void guardian_controller::UpdateSimpleOdometry(){
 	/*double fVelocityLeftRpm=0.0;
 	double fVelocityRightRpm=0.0;*/
 	double fVelocityLeft=0.0;
@@ -529,15 +598,86 @@ void guardian_controller::UpdateOdometry(){
 	double fSamplePeriod = 0.0; // Default sample period
 
 	//fSamplePeriod= CalculateRPM(&fVelocityLeftRpm,&fVelocityRightRpm);
-	fSamplePeriod= CalculateRPM(&fVelocityLeft,&fVelocityRight);
+	fSamplePeriod= CalculateDeltaDistance(&fVelocityLeft,&fVelocityRight);
 
 	// Convert velocities from rpm to m/s
 	/* v_left_mps = fVelocityLeftRpm * dRpmToWheelRpm * dWheelRpmToMps;
 	v_right_mps = fVelocityRightRpm * dRpmToWheelRpm * dWheelRpmToMps; */
-	
+
 	//already in m/s
 	v_left_mps = fVelocityLeft/fSamplePeriod;
 	v_right_mps = fVelocityRight/fSamplePeriod ;
+
+	linearSpeedMps = (v_right_mps + v_left_mps) / 2.0;			   		    // m/s
+	angularSpeedRads = (v_right_mps - v_left_mps) / fDistanceBetweenWheels;    //rad/s
+
+    //Left and right track velocities
+    robot_data.actSpeedLmps = v_left_mps;
+    robot_data.actSpeedRmps = v_right_mps;
+   // ROS_INFO("guardian_controller::CalcRPM OK. v_left_mps = %lf,  v_right_mps = %lf",v_left_mps,v_right_mps);
+
+	//Velocity //this is converting velocity to the odom frame
+	/*robot_pose.va = angularSpeedRads;
+	robot_pose.vx = linearSpeedMps *  cos(robot_pose.pa);
+	robot_pose.vy = linearSpeedMps *  sin(robot_pose.pa);
+	//ROS_INFO("guardian_controller::CalcRPM OK. pa = %lf,  w = %lf, f = %lf", robot_pose.pa, angularSpeedRads, fSamplePeriod);
+
+	//Position
+	robot_pose.pa += angularSpeedRads * fSamplePeriod;
+	radnorm(&robot_pose.pa);
+
+	robot_pose.px += robot_pose.vx * fSamplePeriod;
+	robot_pose.py += robot_pose.vy * fSamplePeriod;
+	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
+
+	robot_data.rpm_right = (float)fVelocityRightRpm;   // Motor RPM
+	robot_data.rpm_left  = (float)fVelocityLeftRpm;*/
+
+    //Velocity
+    //we want velocity in frame base_footprint
+    	robot_pose.va = angularSpeedRads;
+    	robot_pose.vx = linearSpeedMps ; //*  cos(robot_pose.pa); //robot only moves in x coordinate
+    	robot_pose.vy = 0; //linearSpeedMps *  sin(robot_pose.pa);
+    	//ROS_INFO("guardian_controller::CalcRPM OK. pa = %lf,  w = %lf, f = %lf", robot_pose.pa, angularSpeedRads, fSamplePeriod);
+
+    	//Position
+    	robot_pose.pa += angularSpeedRads * fSamplePeriod;
+    	radnorm(&robot_pose.pa);
+
+    //but the pose we want in odom frame, so the multiplication (cos, sin) is done here
+    	robot_pose.px += robot_pose.vx * cos(robot_pose.pa)* fSamplePeriod;
+    	robot_pose.py += robot_pose.vx * sin(robot_pose.pa)* fSamplePeriod;
+    	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
+
+    	//robot_data.rpm_right = (float)fVelocityRightRpm;// Motor RPM
+    	//robot_data.rpm_left  = (float)fVelocityLeftRpm;
+
+    	robot_data.rpm_right = (float)fVelocityRight*dMpsToWheelRpm;  //now convert to rpm
+    	robot_data.rpm_left  = (float)fVelocityLeft*dMpsToWheelRpm;
+
+}
+
+/*!	\fn void guardian_controller::UpdateOdometry()
+	* Updates robot's odometry
+*/
+void guardian_controller::UpdateOdometry(){
+	double fVelocityLeftRpm=0.0;
+	double fVelocityRightRpm=0.0;
+	/*double fVelocityLeft=0.0;
+	double fVelocityRight=0.0;*/
+	double v_left_mps = 0.0, v_right_mps = 0.0;
+	double fSamplePeriod = 0.0; // Default sample period
+
+	fSamplePeriod= CalculateRPM(&fVelocityLeftRpm,&fVelocityRightRpm);
+	//fSamplePeriod= CalculateRPM(&fVelocityLeft,&fVelocityRight);
+
+	// Convert velocities from rpm to m/s
+	v_left_mps = fVelocityLeftRpm * dRpmToWheelRpm * dWheelRpmToMps;
+	v_right_mps = fVelocityRightRpm * dRpmToWheelRpm * dWheelRpmToMps;
+	
+	//already in m/s
+	/*v_left_mps = fVelocityLeft/fSamplePeriod;
+	v_right_mps = fVelocityRight/fSamplePeriod ;*/
 
 	linearSpeedMps = (v_right_mps + v_left_mps) / 2.0;			   		    // m/s
 	angularSpeedRads = (v_right_mps - v_left_mps) / fDistanceBetweenWheels;    //rad/s
@@ -580,11 +720,11 @@ void guardian_controller::UpdateOdometry(){
     	robot_pose.py += robot_pose.vx * sin(robot_pose.pa)* fSamplePeriod;
     	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
 
-    	//robot_data.rpm_right = (float)fVelocityRightRpm;// Motor RPM
-    	//robot_data.rpm_left  = (float)fVelocityLeftRpm;
+    	robot_data.rpm_right = (float)fVelocityRightRpm;// Motor RPM
+    	robot_data.rpm_left  = (float)fVelocityLeftRpm;
 
-    	robot_data.rpm_right = (float)fVelocityRight*dMpsToWheelRpm;  //now convert to rpm
-    	robot_data.rpm_left  = (float)fVelocityLeft*dMpsToWheelRpm;
+    	//robot_data.rpm_right = (float)fVelocityRight*dMpsToWheelRpm;  //now convert to rpm
+    	//robot_data.rpm_left  = (float)fVelocityLeft*dMpsToWheelRpm;
 
 }
 

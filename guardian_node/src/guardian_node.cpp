@@ -253,6 +253,10 @@ void check_powersupply(diagnostic_updater::DiagnosticStatusWrapper &stat)
 
 		stat.add("Battery Voltage", volt); // Battery Voltage
 		stat.addf("Battery (%)", "%.3f", batt); // Battery %
+
+		 std::cout << GREEN <<"*** battery: " << batt  << RESET;
+		        std::cout << RED <<"%| v:  " << volt << RESET << std::endl;
+
 	}
 }
 
@@ -398,12 +402,12 @@ int main(int argc, char** argv){
 
 	//ROS_ERROR("Main: Controller on %s", guardian_hw_interface->GetStateString());
 	// Define subscribers to obtain information through the sensors and joysticks
-  	ros::Subscriber cmd_sub_ = pn.subscribe<geometry_msgs::Twist>("command", 1, cmdCallback); 
+  	ros::Subscriber cmd_sub_ = pn.subscribe<geometry_msgs::Twist>("/guardian/cmd_vel", 1, cmdCallback);
 	
 	//ros::Subscriber io_sub_ = n.subscribe(modbus_io_topic_, 1, ioCallback);
 
 	// Define publishers
-	ros::Publisher odom_pub = pn.advertise<nav_msgs::Odometry>("odom", 30);
+	ros::Publisher odom_pub = pn.advertise<nav_msgs::Odometry>("/guardian/odom", 30);
 	ros::Publisher state_pub = pn.advertise<guardian_node::guardian_state>("state", 30);
 	tf::TransformBroadcaster odom_broadcaster;
 	
@@ -415,10 +419,10 @@ int main(int argc, char** argv){
 	ros::ServiceServer set_odometry_srv_ = pn.advertiseService("set_odometry",  set_odometry);
 	//
 	// Topics freq control 
-	// For /guardian_node/command
+	// For /guardian/cmd_vel
 	double min_freq = GUARDIAN_MIN_COMMAND_REC_FREQ; // If you update these values, the
   	double max_freq = GUARDIAN_MAX_COMMAND_REC_FREQ; // HeaderlessTopicDiagnostic will use the new values.
-	sus_command_freq = new diagnostic_updater::HeaderlessTopicDiagnostic("/guardian_node/command", updater_controller,
+	sus_command_freq = new diagnostic_updater::HeaderlessTopicDiagnostic("/guardian/cmd_vel", updater_controller,
 	                    diagnostic_updater::FrequencyStatusParam(&min_freq, &max_freq, 0.1, 10));
 	sus_command_freq->addTask(&command_freq); // Adding an additional task to the control
 	//

@@ -430,12 +430,12 @@ int main(int argc, char** argv){
 	}
 	//
 	// Defining subscribers to obtain information through the sensors and joysticks
-  	ros::Subscriber cmd_sub_ = n.subscribe<geometry_msgs::Twist>("/guardian_node/command", 1, cmdCallback); 
+  	ros::Subscriber cmd_sub_ = n.subscribe<geometry_msgs::Twist>("/guardian/cmd_vel", 1, cmdCallback);
   	ros::Subscriber imu_sub_ = n.subscribe("/imu/data", 1, imuCallback);
 	//ros::Subscriber io_sub_ = n.subscribe(modbus_io_topic_, 1, ioCallback);
 	//
 	// Defining publishers
-	ros::Publisher odom_pub = n.advertise<nav_msgs::Odometry>("/guardian_node/odom", 30);
+	ros::Publisher odom_pub = n.advertise<nav_msgs::Odometry>("/guardian/odom", 30);
 	ros::Publisher state_pub = n.advertise<guardian_node::guardian_state>("/guardian_node/state", 30);
 	tf::TransformBroadcaster odom_broadcaster;
 	//
@@ -447,10 +447,10 @@ int main(int argc, char** argv){
 	
 	
 	// Topics freq control 
-	// For /guardian_node/command
+	// For /guardian/cmd_vel
 	double min_freq = GUARDIAN_MIN_COMMAND_REC_FREQ; // If you update these values, the
   	double max_freq = GUARDIAN_MAX_COMMAND_REC_FREQ; // HeaderlessTopicDiagnostic will use the new values.
-	sus_command_freq = new diagnostic_updater::HeaderlessTopicDiagnostic("/guardian_node/command", updater_controller,
+	sus_command_freq = new diagnostic_updater::HeaderlessTopicDiagnostic("/guardian/cmd_vel", updater_controller,
 	                    diagnostic_updater::FrequencyStatusParam(&min_freq, &max_freq, 0.1, 10));
 	sus_command_freq->addTask(&command_freq); // Adding an additional task to the control
 	//

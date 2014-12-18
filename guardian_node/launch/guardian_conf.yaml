@@ -1,7 +1,7 @@
 # odometry : wheels or tracks
-odometry_type: tracks
-diameter_wheels: 0.2 # if wheels: 0.36
-distance_between_wheels: 0.498 # if wheels: 0.672
+odometry_type: wheels
+diameter_wheels: 0.36 # if wheels: 0.36 # if tracks: 0.2
+distance_between_wheels: 0.672 # if wheels: 0.672 # if tracks: 0.498
 encoder_config: 1
 encoder_dir: -1
 angular_dir: 1

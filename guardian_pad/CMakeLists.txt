@@ -41,3 +41,9 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 add_executable(guardian_pad src/guardian_pad.cpp)
 target_link_libraries(guardian_pad ${catkin_LIBRARIES})
 add_dependencies(guardian_pad ${catkin_EXPORTED_TARGETS})
+
+#add_executable(guardian_pad src/guardian_pad.cpp ../guardian_node/src/Component.cc ../guardian_node/src/guardian_controller.cc ../guardian_node/src/RoboteqDevice.cpp)
+#target_link_libraries(guardian_pad ${catkin_LIBRARIES})
+#add_dependencies(guardian_pad ${catkin_EXPORTED_TARGETS})
+
+

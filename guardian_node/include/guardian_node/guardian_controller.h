@@ -62,7 +62,7 @@
 #define MOTOR_D_WHEELS_M	                0.650           // theorical distance between motor wheels
 #define MOTOR_MAX_RPM                       2900.0           // Motor specs
 #define WHEELS_MAX_RPM                      (MOTOR_MAX_RPM * MOTOR_GEARBOX) // Max RPM of each wheel depending on the motor's specs
-#define DISTANCE_PER_COUNT 					3.14*0.2/57110
+#define DISTANCE_PER_COUNT 					3.14*0.2/57110  //tracks
 
 #define GUARDIAN_CONTROLLER_REF_FOR_MAX_RPM              1000
 
@@ -341,8 +341,12 @@ class guardian_controller: public Component {
         int ReadEncoders();
         //! Resets the encoders counter with response confirmation
         int ResetEncoders();
+        //! Calculates Delta distance (tracks)
+        double CalculateDeltaDistance(double *delta_left, double *delta_right);
         //! Calculates RPM
         double CalculateRPM(double *rpm_left, double *rpm_right);
+        //!	Updates robot's odometry
+        void UpdateSimpleOdometry(); //tracks
         //!	Updates robot's odometry
         void UpdateOdometry();
         //! Writes motors speed references

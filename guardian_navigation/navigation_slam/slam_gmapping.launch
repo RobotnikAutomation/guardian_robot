@@ -1,6 +1,6 @@
 <launch>
     <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
-  	<remap from="scan" to="/scan" />	
+  	<remap from="scan" to="/guardian/laser_tilt_front" />	
         <param name="base_frame" value="/base_footprint" />
         <param name="odom_frame" value="/odom_combined"/>
         <param name="map_update_interval" value="5.0"/> <!-- 30.0 i 50.0, lo normal és 5.0! -->

@@ -8,7 +8,7 @@
   </node>
 
   <!-- Parameters -->
-  <param name="cmd_topic_vel" value="/guardian_node/command" type="string"/>
+  <param name="cmd_topic_vel" value="/guardian/cmd_vel" type="string"/>
   <param name="cmd_service_io" value="/rly_08_node/set_digital_outputs" type="string"/>
 	<!--<param name="cmd_service_io" value="/modbus_io/write_digital_output" type="string"/>-->
 	<!--<param name="cmd_service_io" value="/modbus_io/input_output" type="string"/>-->
