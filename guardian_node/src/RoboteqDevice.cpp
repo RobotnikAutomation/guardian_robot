@@ -14,6 +14,7 @@
 #include <termios.h>
 #include <time.h>
 #include <sstream>
+#include <unistd.h>
 
 #include "guardian_node/RoboteqDevice.h"
 #include "guardian_node/ErrorCodes.h"
