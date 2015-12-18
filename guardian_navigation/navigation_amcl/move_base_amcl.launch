@@ -1,14 +1,25 @@
 <launch>
   <master auto="start"/>
 
+  <!-- arg name="map_file" default="$(find guardian_navigation)/maps/FEUP/lab_names.yaml" /-->
+  <!-- arg name="map_file" default="$(find guardian_navigation)/maps/FEUP/corredor_lab110.yaml" /-->
+  <!--   <arg name="map_file" default="$(find guardian_navigation)/maps/FEUP/lab2.yaml" /> -->
+  <arg name="map_file" default="$(find guardian_config)/navigation/maps/lab_corridor_machines2.yaml" />
+
+
   <!-- Run the map server -->
-  <node name="map_server" pkg="map_server" type="map_server" args="$(find guardian_navigation)/maps/ita/demo.yaml">
-    <rospam name="frame_id" value="map" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)">
+    <param name="frame_id" value="map" />
   </node>
+  
+  <!-- Run the map server -->
+  <!-- node name="map_server" pkg="map_server" type="map_server" args="$(find guardian_navigation)/maps/ita/demo.yaml">
+    <rospam name="frame_id" value="map" />
+  </node-->
 
   <!--- Run AMCL -->
   <include file="$(find guardian_navigation)/navigation_amcl/amcl_guardian.launch" />
-  <remap from="cmd_vel" to="guardian_node/command" />
+  <remap from="cmd_vel" to="/guardian/cmd_vel" />
 
   <!--- Run EFK Filter -->
   <!--node pkg="robot_pose_ekf" type="robot_pose_ekf" name="robot_pose_ekf"-->
@@ -24,7 +35,7 @@
   </node-->
   
   <!-- Run move_base -->
-  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen"> 
     <!--remap from="odom" to="robot_pose_ekf/odom_combined" /-->
     <!--remap from="odom" to="odom" /-->
     <rosparam file="$(find guardian_navigation)/navigation_config/costmap_common_params.yaml" command="load" ns="global_costmap" />
@@ -32,5 +43,5 @@
     <rosparam file="$(find guardian_navigation)/navigation_config/local_costmap_params.yaml" command="load" />
     <rosparam file="$(find guardian_navigation)/navigation_config/global_costmap_params.yaml" command="load" />
     <rosparam file="$(find guardian_navigation)/navigation_config/base_local_planner_params.yaml" command="load" />
-  </node>
+  </node> 
 </launch>

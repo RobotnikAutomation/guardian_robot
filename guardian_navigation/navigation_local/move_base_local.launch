@@ -4,8 +4,8 @@
 
     <!-- for moving -->
     <node pkg="move_base" type="move_base" respawn="false" name="move_base_node" output="screen">
-  	<remap from="scan" to="scan" />
-  	<remap from="cmd_vel" to="guardian_node/command" />
+  	<remap from="scan" to="/guardian/laser_horizontal_back" />
+  	<remap from="cmd_vel" to="/guardian/cmd_vel" />
         
         <!-- Load common configuration files -->
         <rosparam file="$(find guardian_navigation)/navigation_config/move_base_params.yaml" command="load" />

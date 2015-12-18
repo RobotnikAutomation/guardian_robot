@@ -35,6 +35,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
 #include <geometry_msgs/Twist.h>
+#include <std_srvs/Empty.h>
 
 // Optional (modbus or rly_08)
 // #include <modbus_io/write_digital_output.h>
@@ -91,6 +92,7 @@ class GuardianPad
 	std::string cmd_topic_vel_;
 	//! Name of the service where it will be modifying the digital outputs
 	std::string cmd_service_io_;
+	std::string tilt_laser_start_service_io_, tilt_laser_stop_service_io_;
 	//! Name of the topic where it will be publishing the pant-tilt values	
 	std::string cmd_topic_ptz_;
 	double current_vel;
@@ -99,13 +101,15 @@ class GuardianPad
 	//! Number of the button for increase or decrease the speed max of the joystick	
 	int speed_up_button_, speed_down_button_;
 	int button_output_1_, button_output_2_;
+	int button_tilt_laser_start_, button_tilt_laser_stop_;
 	int output_1_, output_2_;
 	bool bOutput1, bOutput2;
 	//! buttons to the pan-tilt-zoom camera
 	int ptz_tilt_up_, ptz_tilt_down_, ptz_pan_right_, ptz_pan_left_;
 	int ptz_zoom_wide_, ptz_zoom_tele_;	
 	//! Service to modify the digital outputs
-	ros::ServiceClient set_digital_outputs_client_;  
+	ros::ServiceClient set_digital_outputs_client_, button_tilt_laser_start_client_, button_tilt_laser_stop_client_;
+	std_srvs::Empty empty_srv_;
 	//! Enables/disables the pad
 	ros::ServiceServer enable_disable_srv_;
 	//! Number of buttons of the joystick
@@ -129,12 +133,14 @@ class GuardianPad
 	int pan_increment_, tilt_increment_;
 	//! Zoom increment (steps)
 	int zoom_increment_;
+	double speed_increment_;
 };
 
 
 GuardianPad::GuardianPad():
   linear_(1),
-  angular_(2)
+  angular_(2),
+  speed_increment_(0.05)
 {
 
 	current_vel = 0.1;
@@ -164,9 +170,14 @@ GuardianPad::GuardianPad():
 	nh_.param("button_ptz_pan_left", ptz_pan_left_, ptz_pan_left_);
 	nh_.param("button_ptz_zoom_wide", ptz_zoom_wide_, ptz_zoom_wide_);
 	nh_.param("button_ptz_zoom_tele", ptz_zoom_tele_, ptz_zoom_tele_);
+	nh_.param("button_tilt_laser_start", button_tilt_laser_start_, 10);
+	nh_.param("button_tilt_laser_stop", button_tilt_laser_stop_, 8);
 	nh_.param("pan_increment", pan_increment_, 1);
 	nh_.param("tilt_increment",tilt_increment_, 1);
 	nh_.param("zoom_increment", zoom_increment_, 1);
+	nh_.param("speed_increment", speed_increment_, 0.05);
+	nh_.param("tilt_laser_start_service_io", tilt_laser_start_service_io_, std::string("/robotnik_tilt_laser_cloud/start"));
+	nh_.param("tilt_laser_stop_service_io", tilt_laser_stop_service_io_, std::string("/robotnik_tilt_laser_cloud/stop"));
 
 	for(int i = 0; i < DEFAULT_NUM_OF_BUTTONS; i++){
 		bRegisteredButtonEvent[i] = false;
@@ -195,6 +206,8 @@ GuardianPad::GuardianPad():
   	// Request service to activate / deactivate digital I/O
   	//set_digital_outputs_client_ = nh_.serviceClient<modbus_io::write_digital_output>(cmd_service_io_);
 	set_digital_outputs_client_ = nh_.serviceClient<robotnik_msgs::set_digital_output>(cmd_service_io_);
+	button_tilt_laser_start_client_ = nh_.serviceClient<std_srvs::Empty>(tilt_laser_start_service_io_);
+	button_tilt_laser_stop_client_ = nh_.serviceClient<std_srvs::Empty>(tilt_laser_stop_service_io_);
 	bOutput1 = bOutput2 = false;
 	// Advertises new service to enable/disable the pad
 	enable_disable_srv_ = nh_.advertiseService("/guardian_pad/enable_disable",  &GuardianPad::EnableDisable, this);
@@ -244,19 +257,21 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	geometry_msgs::Twist vel;
 	robotnik_msgs::ptz ptz;
 	bool ptzEvent = false;
+	bool stop_pub_cmd = false; //
 
 	//ROS_ERROR("EVENT JOY");	
   	// Actions dependant on dead-man button
  	if (joy->buttons[dead_man_button_] == 1) {
+ 		bEnable = true;
 		//ROS_ERROR("GuardianPan::padCallback: DEADMAN button %d", dead_man_button_);
 		// Set the current velocity level
 		if ( joy->buttons[speed_down_button_] == 1 ){
 
 			if(!bRegisteredButtonEvent[speed_down_button_]) 
-				if(current_vel > 0.1){
-		  			current_vel = current_vel - 0.1;
+				if(current_vel > speed_increment_){
+		  			current_vel = current_vel - speed_increment_;
 					bRegisteredButtonEvent[speed_down_button_] = true;
-					 ROS_INFO("Velocity: %f%%", current_vel*100.0);	
+					 ROS_INFO("Velocity: %f m/s | %f%%", current_vel, current_vel / DEFAULT_MAX_LINEAR_SPEED * 100.0);
 				}	 	
 		}else{
 			bRegisteredButtonEvent[speed_down_button_] = false;
@@ -265,9 +280,9 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		if (joy->buttons[speed_up_button_] == 1){
 			if(!bRegisteredButtonEvent[speed_up_button_])
 				if(current_vel < DEFAULT_MAX_LINEAR_SPEED){
-					current_vel = current_vel + 0.1;
+					current_vel = current_vel + speed_increment_;
 					bRegisteredButtonEvent[speed_up_button_] = true;
-			 	 	ROS_INFO("Velocity: %f%%", current_vel*100.0);
+			 	 	ROS_INFO("Velocity: %f m/s | %f%%", current_vel, current_vel / DEFAULT_MAX_LINEAR_SPEED * 100.0);
 				}
 		  
 		}else{
@@ -375,6 +390,28 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 			bRegisteredButtonEvent[ptz_pan_right_] = false;
 		}
 
+		// TILT LASER
+		if (joy->buttons[button_tilt_laser_start_] == 1) {
+			if(!bRegisteredButtonEvent[button_tilt_laser_start_]) {
+				ROS_INFO("Starting tilt laser");
+				button_tilt_laser_start_client_.call(empty_srv_);
+				bRegisteredButtonEvent[button_tilt_laser_start_] = true;
+			}
+		} else {
+			bRegisteredButtonEvent[button_tilt_laser_start_] = false;
+		}
+
+		if (joy->buttons[button_tilt_laser_stop_] == 1) {
+			if(!bRegisteredButtonEvent[button_tilt_laser_stop_]) {
+				ROS_INFO("Stopping tilt laser");
+				button_tilt_laser_stop_client_.call(empty_srv_);
+				bRegisteredButtonEvent[button_tilt_laser_stop_] = true;
+			}
+		} else {
+			bRegisteredButtonEvent[button_tilt_laser_stop_] = false;
+		}
+
+
 		// ZOOM Settings (RELATIVE)
 		if (joy->buttons[ptz_zoom_wide_] == 1) {			
 			if(!bRegisteredButtonEvent[ptz_zoom_wide_]){
@@ -401,6 +438,8 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
    	else {
 		vel.angular.x = 0.0;	vel.angular.y = 0.0; vel.angular.z = 0.0;
 		vel.linear.x = 0.0; vel.linear.y = 0.0; vel.linear.z = 0.0;
+		stop_pub_cmd = true; //we still want to send vel = 0 to stop the robot
+		//bEnable = false;
 	}
 
 	sus_joy_freq->tick();	// Ticks the reception of joy events
@@ -411,6 +450,8 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 			ptz_pub_.publish(ptz);
 		vel_pub_.publish(vel);
 		pub_command_freq->tick();
+		if (stop_pub_cmd) //but after send vel 0 we don't want to send more
+			bEnable = false;
 	}
 	
 }

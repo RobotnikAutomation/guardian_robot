@@ -6,7 +6,7 @@
 
   <!--- Run SLAM -->
   <include file="$(find guardian_navigation)/navigation_slam/slam_gmapping.launch" />
-  <remap from="cmd_vel" to="guardian_node/command" />
+  <remap from="cmd_vel" to="/guardian/cmd_vel" />
 
   <!--- Run EFK Filter -->
   <!--node pkg="robot_pose_ekf" type="robot_pose_ekf" name="robot_pose_ekf">

@@ -13,6 +13,17 @@
 #include "guardian_node/Component.h"
 #include "guardian_node/RoboteqDevice.h"
 #include <stdint.h>
+
+//the following are UBUNTU/LINUX ONLY terminal color codes.
+#define RESET   "\033[0m"
+#define BLACK   "\033[30m"      /* Black */
+#define RED     "\033[31m"      /* Red */
+#define GREEN   "\033[32m"      /* Green */
+#define YELLOW  "\033[33m"      /* Yellow */
+#define BLUE    "\033[34m"      /* Blue */
+#define MAGENTA "\033[35m"      /* Magenta */
+#define CYAN    "\033[36m"      /* Cyan */
+
 // conection stuff
 #define GUARDIAN_CONTROLLER_DEFAULT_PORT 		        "/dev/ttyS1"
 #define GUARDIAN_CONTROLLER_DEFAULT_PARITY 		        "even"
@@ -42,15 +53,16 @@
 #define ODOMTYPE_WHEELS						"wheels"		
 #define ODOMTYPE_TRACKS						"tracks"
 #define MOTOR_COUNTS_PER_REV		     	2000            // =500 x 4 (in quadrature mode)
-#define MOTOR_GEARBOX					    1.0/40.0          // gearbox 1:40
+#define MOTOR_GEARBOX					    1.0/40.0        // gearbox 1:40
 #define MOTOR_DIAMETER_WHEEL			    0.36		    // m (Diameter by default of the wheel)
-#define MOTOR_DIAMETER_TRACK_WHEEL		    0.258		    // m (Diameter of the wheel used for "tracks" odometry)
+#define MOTOR_DIAMETER_TRACK_WHEEL		    0.2		        // m (Diameter of the wheel used for "tracks" odometry)
 #define MOTOR_GEARBOX_TO_TRACK_FACTOR		21.0/15.0		// Factor applied to convert motor gearbox spins to track spin
 //#define MOTOR_RPM2MPS			            0.012790994     // conversion value from rpm to mps PI*Diameter/60          // 
 #define MOTOR_D_TRACKS_M	                0.448          	// theorical distance between motor tracks 
 #define MOTOR_D_WHEELS_M	                0.650           // theorical distance between motor wheels
 #define MOTOR_MAX_RPM                       2900.0           // Motor specs
 #define WHEELS_MAX_RPM                      (MOTOR_MAX_RPM * MOTOR_GEARBOX) // Max RPM of each wheel depending on the motor's specs
+#define DISTANCE_PER_COUNT 					3.14*0.2/57110  //tracks
 
 #define GUARDIAN_CONTROLLER_REF_FOR_MAX_RPM              1000
 
@@ -329,8 +341,12 @@ class guardian_controller: public Component {
         int ReadEncoders();
         //! Resets the encoders counter with response confirmation
         int ResetEncoders();
+        //! Calculates Delta distance (tracks)
+        double CalculateDeltaDistance(double *delta_left, double *delta_right);
         //! Calculates RPM
         double CalculateRPM(double *rpm_left, double *rpm_right);
+        //!	Updates robot's odometry
+        void UpdateSimpleOdometry(); //tracks
         //!	Updates robot's odometry
         void UpdateOdometry();
         //! Writes motors speed references

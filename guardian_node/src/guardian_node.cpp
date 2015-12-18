@@ -48,6 +48,8 @@
 #include <diagnostic_updater/publisher.h>
 #include <boost/assign.hpp>
 
+#include <tf/LinearMath/Vector3.h>
+#include <tf/LinearMath/Quaternion.h>
 
 #define		GUARDIAN_DEFAULT_MAX_LINEAR_SPEED	1.5		// m/s
 #define		GUARDIAN_DEFAULT_MAX_ANGULAR_SPEED	40.0	// degrees/s
@@ -67,7 +69,7 @@
 
 std::string port;
 
-guardian_controller* guardian_hw_interface; 						// Instance to the interface
+guardian_controller* guardian_hw_interface; 		// Instance to the interface
 guardian_node::guardian_state robot_state;			// Guardian's state message
 double v, w = 0.0; 									// Callback cmd vel variables
 std::string sOdometryType_; 						// Type of odometry used by the robot
@@ -244,10 +246,17 @@ void check_powersupply(diagnostic_updater::DiagnosticStatusWrapper &stat)
 			stat.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Low battery Level.");
 		}else{
 			stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "Extremely low battery Level. You should charge the battery.");
+			/*std::cout << RED <<"**************************************************" << RESET << std::endl;
+			std::cout << RED <<"********** Extremely low battery Level: " << batt << "**********" << RESET << std::endl;
+			std::cout << RED <<"**************************************************" << RESET << std::endl;*/		
 		}
 
 		stat.add("Battery Voltage", volt); // Battery Voltage
 		stat.addf("Battery (%)", "%.3f", batt); // Battery %
+
+		 std::cout << GREEN <<"*** battery: " << batt  << RESET;
+		        std::cout << RED <<"%| v:  " << volt << RESET << std::endl;
+
 	}
 }
 
@@ -260,7 +269,7 @@ int main(int argc, char** argv){
 	ros::NodeHandle n, pn("~");
 	pose robot_pose;	// Position & velocity from the odometry
 	double max_linear_speed_, max_angular_speed_;
-	double diameter_wheels_, distance_between_wheels_;	// Diameter of the wheels and distance between them
+	double diameter_wheels_, distance_between_wheels_, error_factor_;	// Diameter of the wheels and distance between them
 	sensor_msgs::JointState robot_joints_;
 	double desired_freq_ = 0;
 	
@@ -270,7 +279,7 @@ int main(int argc, char** argv){
 	float left_rpm = 0.0, right_rpm = 0.0;
 	double inc_left_wheel = 0.0, inc_right_wheel = 0.0;
 	std::string back_left_wheel_joint_name_, back_right_wheel_joint_name_, front_left_wheel_joint_name_, front_right_wheel_joint_name_;
-	
+	bool invert_odom_tf_;
 	//
 	// The Updater class advertises to /diagnostics, and has a
 	// ~diagnostic_period parameter that says how often the diagnostics
@@ -303,18 +312,31 @@ int main(int argc, char** argv){
 	pn.param("max_linear_speed", max_linear_speed_,  GUARDIAN_DEFAULT_MAX_LINEAR_SPEED);
 	pn.param("max_angular_speed", max_angular_speed_,  GUARDIAN_DEFAULT_MAX_ANGULAR_SPEED);
 	pn.param("odometry_type", sOdometryType_, sDefaultOdometryType);
-	pn.param("diameter_wheels", diameter_wheels_,  MOTOR_DIAMETER_WHEEL);
-	pn.param("distance_between_wheels", distance_between_wheels_,  MOTOR_D_TRACKS_M);
+
+    if (sOdometryType_ == "tracks")
+    {
+        pn.param("diameter_wheels", diameter_wheels_,  MOTOR_DIAMETER_TRACK_WHEEL);
+        pn.param("distance_between_wheels", distance_between_wheels_,  MOTOR_D_TRACKS_M);
+        pn.param("error_factor", error_factor_, ERROR_D_2);
+    }
+    else
+    {
+        pn.param("diameter_wheels", diameter_wheels_,  MOTOR_DIAMETER_WHEEL);
+        pn.param("distance_between_wheels", distance_between_wheels_,  MOTOR_D_WHEELS_M);
+        pn.param("error_factor", error_factor_, ERROR_D_1);
+    }
 	pn.param("encoder_config", encoder_config_, ROBOTEQ_DEFAULT_ENCODER_CONF);
 	pn.param("encoder_dir", encoder_dir_, ROBOTEQ_DEFAULT_ENCODER_DIR);
 	pn.param("angular_dir", angular_dir_, ROBOTEQ_DEFAULT_ANGULAR_DIR);
-	pn.param("publish_tf", publish_tf_, publish_tf_);
+    pn.param("publish_tf", publish_tf_, true);
 	pn.param("desired_freq", desired_freq_, 20.0);
 	pn.param<std::string>("back_left_wheel_joint_name", back_left_wheel_joint_name_, "joint_back_left_wheel");
 	pn.param<std::string>("back_right_wheel_joint_name", back_right_wheel_joint_name_, "joint_back_right_wheel");
 	pn.param<std::string>("front_left_wheel_joint_name", front_left_wheel_joint_name_, "joint_front_left_wheel");
 	pn.param<std::string>("front_right_wheel_joint_name", front_right_wheel_joint_name_, "joint_front_right_wheel");
 	
+	pn.param("invert_odom_tf", invert_odom_tf_, false);
+
 	ROS_INFO("guardian_node::main: Motor dev = %s", sDevicePort.c_str());
 	ROS_INFO("guardian_node::main: Max Speed: v = %.2f m/s, w = %.2f d/s", max_linear_speed_, max_angular_speed_);
 	ROS_INFO("guardian_node::main: Odometry type: %s", sOdometryType_.c_str());
@@ -332,15 +354,16 @@ int main(int argc, char** argv){
   	}else{
 		// Applies the configuration to the driver
 		// For odom using tracks, the configuration is pre-defined by default
-		if(!sOdometryType_.compare(ODOMTYPE_TRACKS)){
-			distance_between_wheels_ = MOTOR_DIAMETER_TRACK_WHEEL;
-			diameter_wheels_ = MOTOR_DIAMETER_TRACK_WHEEL;	
+		/*if(!sOdometryType_.compare(ODOMTYPE_TRACKS)){
 			distance_between_wheels_ *= ERROR_D_2;	// Applying error factor for odom calcs
 			guardian_hw_interface->SetConversionFactor(MOTOR_GEARBOX_TO_TRACK_FACTOR);
 		}
 		else{
 			distance_between_wheels_ *= ERROR_D_1;	// Applying error factor for odom calcs
-		}
+		}*/
+  		
+  		distance_between_wheels_ *= error_factor_;
+  		
 		// Sets the max. speed read from the param
 		guardian_hw_interface->SetSpeedLimits(max_linear_speed_, DTOR(max_angular_speed_));
 		guardian_hw_interface->SetMotorWheelParams(diameter_wheels_, distance_between_wheels_);
@@ -379,12 +402,12 @@ int main(int argc, char** argv){
 
 	//ROS_ERROR("Main: Controller on %s", guardian_hw_interface->GetStateString());
 	// Define subscribers to obtain information through the sensors and joysticks
-  	ros::Subscriber cmd_sub_ = pn.subscribe<geometry_msgs::Twist>("command", 1, cmdCallback); 
+  	ros::Subscriber cmd_sub_ = pn.subscribe<geometry_msgs::Twist>("/guardian/cmd_vel", 1, cmdCallback);
 	
 	//ros::Subscriber io_sub_ = n.subscribe(modbus_io_topic_, 1, ioCallback);
 
 	// Define publishers
-	ros::Publisher odom_pub = pn.advertise<nav_msgs::Odometry>("odom", 30);
+	ros::Publisher odom_pub = pn.advertise<nav_msgs::Odometry>("/guardian/odom", 30);
 	ros::Publisher state_pub = pn.advertise<guardian_node::guardian_state>("state", 30);
 	tf::TransformBroadcaster odom_broadcaster;
 	
@@ -396,10 +419,10 @@ int main(int argc, char** argv){
 	ros::ServiceServer set_odometry_srv_ = pn.advertiseService("set_odometry",  set_odometry);
 	//
 	// Topics freq control 
-	// For /guardian_node/command
+	// For /guardian/cmd_vel
 	double min_freq = GUARDIAN_MIN_COMMAND_REC_FREQ; // If you update these values, the
   	double max_freq = GUARDIAN_MAX_COMMAND_REC_FREQ; // HeaderlessTopicDiagnostic will use the new values.
-	sus_command_freq = new diagnostic_updater::HeaderlessTopicDiagnostic("/guardian_node/command", updater_controller,
+	sus_command_freq = new diagnostic_updater::HeaderlessTopicDiagnostic("/guardian/cmd_vel", updater_controller,
 	                    diagnostic_updater::FrequencyStatusParam(&min_freq, &max_freq, 0.1, 10));
 	sus_command_freq->addTask(&command_freq); // Adding an additional task to the control
 	//
@@ -441,14 +464,37 @@ int main(int argc, char** argv){
 		if(publish_tf_){
 			//first, we'll publish the transform over tf
 			geometry_msgs::TransformStamped odom_trans;
-			odom_trans.header.stamp = current_time;
-			odom_trans.header.frame_id = "odom";
-			odom_trans.child_frame_id = "base_footprint"; // base_link
 
-			odom_trans.transform.translation.x = robot_pose.px;
-			odom_trans.transform.translation.y = robot_pose.py;
-			odom_trans.transform.translation.z = 0.0;
-			odom_trans.transform.rotation = odom_quat;
+			if (invert_odom_tf_){ //Invert odom transform
+				tf::Vector3 v(robot_pose.px, robot_pose.py, 0);
+				tf::Quaternion q;
+				tf::quaternionMsgToTF(odom_quat, q);
+				tf::Transform tf_temp(q,v);
+				tf_temp = tf_temp.inverse();
+
+				odom_trans.header.stamp = current_time;
+				odom_trans.header.frame_id = "base_footprint";
+				odom_trans.child_frame_id = "odom_inverted";
+
+				odom_trans.transform.translation.x = tf_temp.getOrigin().getX();
+				odom_trans.transform.translation.y = tf_temp.getOrigin().getY();
+				odom_trans.transform.translation.z = 0.0;
+
+				geometry_msgs::Quaternion odom_quat2;
+				tf::quaternionTFToMsg(tf_temp.getRotation(),odom_quat2);
+				odom_trans.transform.rotation = odom_quat2;
+			}
+			else{
+
+				odom_trans.header.stamp = current_time;
+				odom_trans.header.frame_id = "odom";
+				odom_trans.child_frame_id = "base_footprint";
+
+				odom_trans.transform.translation.x = robot_pose.px;
+				odom_trans.transform.translation.y = robot_pose.py;
+				odom_trans.transform.translation.z = 0.0;
+				odom_trans.transform.rotation = odom_quat;
+			}
 
 			//send the transform
 			odom_broadcaster.sendTransform(odom_trans);
@@ -496,15 +542,14 @@ int main(int argc, char** argv){
 		// Gets the current robot rpms
 		guardian_hw_interface->GetRPM(&left_rpm, &right_rpm);
 		// 1 rev -> 3.1416 rads
-		// 1 min -> 3600 segs
+        // 1 min -> 60 segs
 		// desired_freq_
-		inc_left_wheel = ((left_rpm * 3.1416)/3600)/desired_freq_;
-		inc_right_wheel = ((right_rpm * 3.1416)/3600)/desired_freq_;
+		inc_left_wheel = ((left_rpm * 3.1416)/60)/desired_freq_;
+		inc_right_wheel = ((right_rpm * 3.1416)/60)/desired_freq_;
 		robot_joints_.position[0] = robot_joints_.position[0] + inc_left_wheel;
 		robot_joints_.position[1] = robot_joints_.position[1] + inc_left_wheel;
 		robot_joints_.position[2] = robot_joints_.position[2] + inc_right_wheel;
 		robot_joints_.position[3] = robot_joints_.position[3] + inc_right_wheel;
-		
 
 		joint_state_pub_.publish( robot_joints_ );
 

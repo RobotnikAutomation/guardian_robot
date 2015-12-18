@@ -19,3 +19,8 @@ button_ptz_zoom_tele: 0
 tilt_increment: 5
 pan_increment: 5
 zoom_increment: 300
+speed_increment: 0.05
+button_tilt_laser_start: 10
+button_tilt_laser_stop: 8
+tilt_laser_start_service_io: '/robotnik_tilt_laser_cloud/start'
+tilt_laser_stop_service_io: '/robotnik_tilt_laser_cloud/stop'

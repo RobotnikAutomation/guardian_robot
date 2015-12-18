@@ -4,6 +4,6 @@ footprint: [[0.5, -0.275], [0.5, 0.275], [-0.5,0.275], [-0.5, -0.275]]
 inflation_radius: 0.55
 
 observation_sources: hokuyo_laser
-
-hokuyo_laser: {sensor_frame: hokuyo_laser_link, data_type: LaserScan, topic: scan, marking: true, clearing: true}
+#hokuyo_laser_link
+hokuyo_laser: {sensor_frame: hokuyo_frontal_laser_link, data_type: LaserScan, topic: scan, marking: true, clearing: true}
 

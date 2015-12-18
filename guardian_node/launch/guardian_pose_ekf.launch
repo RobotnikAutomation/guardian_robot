@@ -9,7 +9,7 @@
   <param name="imu_used" value="true"/>
   <param name="vo_used" value="false"/>
 
-  <remap from="odom" to="/guardian_node/odom" />
+  <remap from="odom" to="/guardian/odom" />
   <remap from="imu_data" to="/imu/data" />
 </node>
 

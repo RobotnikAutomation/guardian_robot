@@ -2,11 +2,11 @@
 <node pkg="amcl" type="amcl" name="amcl" output="screen">
 
   <!--remap from="scan" to="hokuyo_laser_topic" /-->
-  <remap from="scan" to="/scan" />
-  <remap from="cmd_vel" to="guardian_node/command" />
+  <remap from="scan" to="/guardian/laser_tilt_front" />
+  <remap from="cmd_vel" to="/guardian/cmd_vel" />
 
   <param name="base_frame_id" value="/base_footprint" />
-  <param name="odom_frame_id" value="/odom_combined"/>
+  <param name="odom_frame_id" value="/odom"/>
 
   <!-- Publish scans from best pose at a max of 10 Hz -->
   <param name="odom_model_type" value="diff"/>
@@ -40,13 +40,13 @@
   <!--param name="base_frame_id" value="base_footprint"/>
   <param name="global_frame_id" value="map"/-->
   <param name="resample_interval" value="5"/>
-  <param name="transform_tolerance" value="0.2"/>
+  <param name="transform_tolerance" value="0.5"/>
   <param name="recovery_alpha_slow" value="0.0"/>
   <param name="recovery_alpha_fast" value="0.0"/>
 
-  <param name="initial_pose_x" value ="5.2"/>
+  <!-- param name="initial_pose_x" value ="5.2"/>
   <param name="initial_pose_y" value ="3.129"/>
-  <param name="initial_pose_a" value ="0.0"/>
+  <param name="initial_pose_a" value ="0.0"/-->
 
 </node>
 </launch>
