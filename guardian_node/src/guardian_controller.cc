@@ -5,6 +5,7 @@
  *
  * \brief guardian_controller class driver
  * Component to manage guardian_controller servo driver
+ * Some improvements & modifications have been merged from Centre for Robotics and Intelligent Systems (http://www.inesctec.pt/crob-en/apresentacao-crob)
  * Controller for Roboteq generation NTXGEN
  * (C) 2012 Robotnik Automation, SLL
 */
@@ -85,6 +86,8 @@ guardian_controller::guardian_controller(const char *device, double hz): Compone
     this->linearSpeedMps = 0.0;
     this->angularSpeedRads = 0.0;
     this->robot_data.channel_A_ref = this->robot_data.channel_B_ref = 0;
+
+    this->sleepTime=10;
 }
 
 /*!	\fn guardian_controller::~guardian_controller()
@@ -112,8 +115,9 @@ guardian_controller::~guardian_controller(){
 ReturnValue guardian_controller::Open(){
 
 	// Setup and start guardian_controller device
-	if(this->roboteq->Connect(sDevice) != RQ_SUCCESS) {
-		ROS_ERROR("guardian_controller::Open: Error opening roboteq port");
+	int status = this->roboteq->Connect(sDevice);
+	if(status != RQ_SUCCESS) {
+		ROS_ERROR("guardian_controller::Open: Error opening roboteq port: error = %d", status);
 		SwitchToState(FAILURE_STATE);
 		this->iErrorType = GUARDIAN_CONTROLLER_ERROR_OPENING;
 		return ERROR;
@@ -132,12 +136,12 @@ ReturnValue guardian_controller::Open(){
 ReturnValue guardian_controller::Configure(){
     int status = 0;
     if( (status = roboteq->SetConfig(_DINA, 1, 1)) != RQ_SUCCESS)
-		ROS_ERROR("guardian_controller::Configure: failed --> %d", status);
+		ROS_ERROR("guardian_controller::Configure: failed: error = %d", status);
 	else
 		ROS_DEBUG("guardian_controller::Configure succeeded");
 
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+    sleepms(sleepTime);
 
 	return OK;
 }
@@ -173,7 +177,7 @@ void guardian_controller::ReadBatteryVoltage(){
         robot_data.battery = CalculateBattery(robot_data.voltage);
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+    sleepms(sleepTime);
 }
 
 /*!	\fn void void guardian_controller::ReadTemperature()
@@ -194,7 +198,7 @@ void guardian_controller::ReadTemperature(){
         //robot_data.temperature[1]=ValToHSTemp(HexToDec(&buf[4],2));
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+    sleepms(sleepTime);
 }
 
 /*!	\fn void void guardian_controller::ReadControlMode()
@@ -212,11 +216,9 @@ void guardian_controller::ReadMotorControlMode(){
     }else{
         ROS_DEBUG("guardian_controller::ReadMotorControlMode: Mode =  %d\n", mode);
         motor_control_mode = mode;
-        //robot_data.temperature[0]=ValToHSTemp(HexToDec(&buf[2],2));
-        //robot_data.temperature[1]=ValToHSTemp(HexToDec(&buf[4],2));
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+    sleepms(sleepTime);
 }
 
 /*!	\fn void void guardian_controller::ReadInputControlMode()
@@ -237,7 +239,7 @@ void guardian_controller::ReadInputControlMode(){
         //robot_data.temperature[1]=ValToHSTemp(HexToDec(&buf[4],2));
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);*/
+	sleepms(sleepTime);*/
 
 }
 
@@ -259,7 +261,7 @@ void guardian_controller::WriteMotorControlMode(MotorControlMode mcm){
         ROS_DEBUG("guardian_controller::WriteMotorControlMode: Set mode %d", mode);
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+    sleepms(sleepTime);
 }
 
 /*!	\fn int guardian_controller::ReadAnalogInput(int number)
@@ -284,7 +286,7 @@ int guardian_controller::ReadAnalogInput(int number){
         robot_data.analog_input[number-1] = (float)input/1000.0;    // Converts from mV to V
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+    sleepms(sleepTime);
 
 	return status;
 
@@ -310,7 +312,7 @@ int guardian_controller::ReadDigitalInput(int number){
         robot_data.digital_input[number-1] = input;
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+    sleepms(sleepTime);
 
 	return status;
 }
@@ -361,27 +363,31 @@ int guardian_controller::ReadEncoders(){
 	//ROS_INFO("guardian_controller::ReadEncoders: LEFT");
     status = roboteq->GetValue(_ABCNTR, iChannelEncLeft, enc);
     if(status != RQ_SUCCESS){
-        ROS_ERROR("guardian_controller::ReadEncoders: error = %d", status);
+        ROS_WARN("guardian_controller::ReadEncoders: error = %d", status);
     }else{
         //ROS_INFO("guardian_controller::ReadEncoders: Encoder Left = %d", enc);
+    	pthread_mutex_lock(&mutex_encoders);
         this->robot_data.encoder_left = this->iEncoderDir * enc;
+        pthread_mutex_unlock(&mutex_encoders);
         bEncL = true;
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+	sleepms(sleepTime);
 
 	// ENCODER RIGHT
 	//ROS_INFO("guardian_controller::ReadEncoders: RIGHT");
     status = roboteq->GetValue(_ABCNTR, iChannelEncRight, enc);
     if(status != RQ_SUCCESS){
-        ROS_ERROR("guardian_controller::ReadEncoders: error = %d", status);
+        ROS_WARN("guardian_controller::ReadEncoders: error = %d", status);
     }else{
 		//ROS_INFO("guardian_controller::ReadEncoders: Encoder Right = %d", enc);
+    	pthread_mutex_lock(&mutex_encoders);
         this->robot_data.encoder_right = this->iEncoderDir * enc;
+        pthread_mutex_unlock(&mutex_encoders);
         bEncR = true;
     }
     //Wait 10 ms before sending another command to device
-	sleepms(10);
+    sleepms(sleepTime);
 
     if (bEncL && bEncR)
 		return OK;
@@ -395,9 +401,13 @@ int guardian_controller::ReadEncoders(){
  *	\return ERROR
 */
 int guardian_controller::ResetEncoders(){
-
-
-	return OK;
+	if (ReadEncoders() == OK) {
+		this->robot_data.last_encoder_right = this->robot_data.encoder_right;
+		this->robot_data.last_encoder_left = this->robot_data.encoder_left;
+		return OK;
+	} else {
+		return ERROR;
+	}
 }
 
 
@@ -424,25 +434,97 @@ void guardian_controller::WriteMotorSpeed(int channel_a, int channel_b){
 	//ROS_INFO("guardian_controller::WriteMotorSpeed: setting channel A ( %d)", channel_a);
 	status = roboteq->SetCommand(_GO, 1, channel_a);
     if( status != RQ_SUCCESS){
-        ROS_ERROR("guardian_controller::WriteMotorSpeed: Error setting channel A (error = %d)", status);
+        ROS_WARN("guardian_controller::WriteMotorSpeed: Error setting channel A (error = %d)", status);
     }else{
 
-        sleepms(10);
+        sleepms(sleepTime);
 		//ROS_INFO("guardian_controller::WriteMotorSpeed: setting channel B ( %d)", channel_b);
         status = roboteq->SetCommand(_GO, 2, channel_b);
         if( status != RQ_SUCCESS){
-            ROS_ERROR("guardian_controller::WriteMotorSpeed: Error setting channel B (error = %d)", status);
+            ROS_WARN("guardian_controller::WriteMotorSpeed: Error setting channel B (error = %d)", status);
         }
 		
     }
     //Wait 10 ms before sending another command to device
-    sleepms(10);
+    sleepms(sleepTime);
 
     // Saves the last references sent to the channels
     robot_data.channel_A_ref = channel_a;
     robot_data.channel_B_ref = channel_b;
 
 }
+
+/*!	\fn double guardian_controller::CalculateDeltaDistance()
+	* Calculates distance travelled
+	* @return sample period in seconds
+*/
+double guardian_controller::CalculateDeltaDistance(double *delta_left, double *delta_right){
+	static bool first = true;
+		static struct timespec now, last;
+		int inc_left_counts = 0, inc_right_counts = 0;
+		double secs= 1.0 / threadData.dRealHz;
+		int diff= 0;
+		double rev_per_min_left = 0.0, rev_per_min_right=0.0;
+		static bool bfirst = true;
+
+
+		// ABSOLUTE ENCODERS
+		if(this->encoders_mode == GUARDIAN_CONTROLLER_ABSOLUTE_ENCODERS){
+	        pthread_mutex_lock(&mutex_encoders);
+			if(bfirst){
+				inc_left_counts = 0;
+			    	inc_right_counts = 0;
+			    	robot_data.last_encoder_left = robot_data.encoder_left;
+			    	robot_data.last_encoder_right = robot_data.encoder_right;
+				bfirst = false;
+			}else{
+				inc_left_counts = robot_data.encoder_left - robot_data.last_encoder_left;
+			    inc_right_counts = robot_data.encoder_right - robot_data.last_encoder_right;
+			    robot_data.last_encoder_left = robot_data.encoder_left;
+			    robot_data.last_encoder_right = robot_data.encoder_right;
+			}
+	        pthread_mutex_unlock(&mutex_encoders);
+	        }
+	    else {
+	    // RELATIVE ENCODERS
+	        pthread_mutex_lock(&mutex_encoders);
+
+	            inc_left_counts = robot_data.encoder_left;
+	            inc_right_counts = robot_data.encoder_right;
+
+				if(abs(inc_left_counts) > GUARDIAN_CONTROLLER_MAX_ENC_INC) {	// Check wrong data
+	                ROS_ERROR("guardian_controller::CalculateRPM:Relative: error reading left encoder: inc = %d", inc_left_counts);
+					inc_left_counts = robot_data.last_encoder_left;
+				}else{
+					robot_data.last_encoder_left = robot_data.encoder_left;
+	            }
+
+				if(abs(inc_right_counts) > GUARDIAN_CONTROLLER_MAX_ENC_INC){	//En caso de que llegase un dato an��malo
+					ROS_ERROR("guardian_controller::CalculateRPM:Relative: error reading right encoder: inc = %d", inc_right_counts);
+					inc_right_counts = robot_data.last_encoder_right;
+				}else{
+					robot_data.last_encoder_right = robot_data.encoder_right;
+				}
+
+				robot_data.encoder_left = 0;
+				robot_data.encoder_right = 0;
+
+	        pthread_mutex_unlock(&mutex_encoders);
+	    }
+
+		//	Calcs rev per min for each motor
+	/*
+		*rpm_left= rev_per_min_left = (inc_left_counts/secs)*dCountsPerSec_To_RevPerMin;
+		*rpm_right = rev_per_min_right = (inc_right_counts/secs)*dCountsPerSec_To_RevPerMin;
+	*/
+		*delta_left= (inc_left_counts)* DISTANCE_PER_COUNT;
+		*delta_right= (inc_right_counts)* DISTANCE_PER_COUNT;
+
+		//sprintf(aux, "guardian_controller::CalculateRPM: Rpm left = %lf(inc encoder = %d)\t Rpm Right = %lf(inc encoder = %d)\t time: diff= %lf secs\n", rev_per_min_left, inc_left_counts,rev_per_min_right,inc_right_counts,secs);
+
+		return secs;
+	}
+
 
 /*!	\fn double guardian_controller::CalculateRPM()
 	* Calculates RPM
@@ -460,24 +542,24 @@ double guardian_controller::CalculateRPM(double *rpm_left, double *rpm_right){
 
 	// ABSOLUTE ENCODERS
 	if(this->encoders_mode == GUARDIAN_CONTROLLER_ABSOLUTE_ENCODERS){
-        //pthread_mutex_lock(&mutex_encoders);
+        pthread_mutex_lock(&mutex_encoders);
 		if(bfirst){
 			inc_left_counts = 0;
-		    	inc_right_counts = 0;
-		    	robot_data.last_encoder_left = robot_data.encoder_left;
-		    	robot_data.last_encoder_right = robot_data.encoder_right;
+		    inc_right_counts = 0;
+		    robot_data.last_encoder_left = robot_data.encoder_left;
+		    robot_data.last_encoder_right = robot_data.encoder_right;
 			bfirst = false;
 		}else{
 			inc_left_counts = robot_data.encoder_left - robot_data.last_encoder_left;
-		    	inc_right_counts = robot_data.encoder_right - robot_data.last_encoder_right;
-		    	robot_data.last_encoder_left = robot_data.encoder_left;
-		    	robot_data.last_encoder_right = robot_data.encoder_right;
+		    inc_right_counts = robot_data.encoder_right - robot_data.last_encoder_right;
+		    robot_data.last_encoder_left = robot_data.encoder_left;
+		    robot_data.last_encoder_right = robot_data.encoder_right;
 		}
-        //pthread_mutex_unlock(&mutex_encoders);
+        pthread_mutex_unlock(&mutex_encoders);
         }
     else {
     // RELATIVE ENCODERS
-        //pthread_mutex_lock(&mutex_encoders);
+        pthread_mutex_lock(&mutex_encoders);
 
             inc_left_counts = robot_data.encoder_left;
             inc_right_counts = robot_data.encoder_right;
@@ -499,10 +581,11 @@ double guardian_controller::CalculateRPM(double *rpm_left, double *rpm_right){
 			robot_data.encoder_left = 0;
 			robot_data.encoder_right = 0;
 
-        //pthread_mutex_unlock(&mutex_encoders);
+        pthread_mutex_unlock(&mutex_encoders);
     }
 	
 	//	Calcs rev per min for each motor
+
 	*rpm_left= rev_per_min_left = (inc_left_counts/secs)*dCountsPerSec_To_RevPerMin;
 	*rpm_right = rev_per_min_right = (inc_right_counts/secs)*dCountsPerSec_To_RevPerMin;
 
@@ -512,6 +595,59 @@ double guardian_controller::CalculateRPM(double *rpm_left, double *rpm_right){
 	return secs;
 }
 
+
+/*!	\fn void guardian_controller::UpdateSimpleOdometry()
+	* Updates robot's odometry - only for tracks
+*/
+void guardian_controller::UpdateSimpleOdometry(){
+	/*double fVelocityLeftRpm=0.0;
+	double fVelocityRightRpm=0.0;*/
+	double fVelocityLeft=0.0;
+	double fVelocityRight=0.0;
+	double v_left_mps = 0.0, v_right_mps = 0.0;
+	double fSamplePeriod = 0.0; // Default sample period
+
+	//fSamplePeriod= CalculateRPM(&fVelocityLeftRpm,&fVelocityRightRpm);
+	fSamplePeriod= CalculateDeltaDistance(&fVelocityLeft,&fVelocityRight);
+
+	// Convert velocities from rpm to m/s
+	/* v_left_mps = fVelocityLeftRpm * dRpmToWheelRpm * dWheelRpmToMps;
+	v_right_mps = fVelocityRightRpm * dRpmToWheelRpm * dWheelRpmToMps; */
+
+	//already in m/s
+	v_left_mps = fVelocityLeft/fSamplePeriod;
+	v_right_mps = fVelocityRight/fSamplePeriod ;
+
+	linearSpeedMps = (v_right_mps + v_left_mps) / 2.0;			   		    // m/s
+	angularSpeedRads = (v_right_mps - v_left_mps) / fDistanceBetweenWheels;    //rad/s
+
+    //Left and right track velocities
+    robot_data.actSpeedLmps = v_left_mps;
+    robot_data.actSpeedRmps = v_right_mps;
+	// ROS_INFO("guardian_controller::CalcRPM OK. v_left_mps = %lf,  v_right_mps = %lf",v_left_mps,v_right_mps);
+
+    pthread_mutex_lock(&mutex_odometry);
+    //Velocity
+    //we want velocity in frame base_footprint
+    	robot_pose.va = angularSpeedRads;
+    	robot_pose.vx = linearSpeedMps ; //*  cos(robot_pose.pa); //robot only moves in x coordinate
+    	robot_pose.vy = 0; //linearSpeedMps *  sin(robot_pose.pa);
+    	//ROS_INFO("guardian_controller::CalcRPM OK. pa = %lf,  w = %lf, f = %lf", robot_pose.pa, angularSpeedRads, fSamplePeriod);
+
+    	//Position
+    	robot_pose.pa += angularSpeedRads * fSamplePeriod;
+    	radnorm(&robot_pose.pa);
+
+		//but the pose we want in odom frame, so the multiplication (cos, sin) is done here
+    	robot_pose.px += robot_pose.vx * cos(robot_pose.pa)* fSamplePeriod;
+    	robot_pose.py += robot_pose.vx * sin(robot_pose.pa)* fSamplePeriod;
+    pthread_mutex_unlock(&mutex_odometry);
+    	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
+
+    	robot_data.rpm_right = (float)fVelocityRight*dMpsToWheelRpm;  //now convert to rpm
+    	robot_data.rpm_left  = (float)fVelocityLeft*dMpsToWheelRpm;
+
+}
 
 /*!	\fn void guardian_controller::UpdateOdometry()
 	* Updates robot's odometry
@@ -533,24 +669,26 @@ void guardian_controller::UpdateOdometry(){
     //Left and right track velocities
     robot_data.actSpeedLmps = v_left_mps;
     robot_data.actSpeedRmps = v_right_mps;
-   // ROS_INFO("guardian_controller::CalcRPM OK. v_left_mps = %lf,  v_right_mps = %lf",v_left_mps,v_right_mps);
-	
-	//Velocity
-	robot_pose.va = angularSpeedRads;
-	robot_pose.vx = linearSpeedMps *  cos(robot_pose.pa);
-	robot_pose.vy = linearSpeedMps *  sin(robot_pose.pa);
-	//ROS_INFO("guardian_controller::CalcRPM OK. pa = %lf,  w = %lf, f = %lf", robot_pose.pa, angularSpeedRads, fSamplePeriod);
 
-	//Position
-	robot_pose.pa += angularSpeedRads * fSamplePeriod;
-	radnorm(&robot_pose.pa);
+    //Velocity 
+    //we want velocity in frame base_footprint
+    pthread_mutex_lock(&mutex_odometry);
+    	robot_pose.va = angularSpeedRads;
+    	robot_pose.vx = linearSpeedMps ; 
+    	robot_pose.vy = 0; 
 
-	robot_pose.px += robot_pose.vx * fSamplePeriod;
-	robot_pose.py += robot_pose.vy * fSamplePeriod;
-	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
+    	//Position
+    	robot_pose.pa += angularSpeedRads * fSamplePeriod;
+    	radnorm(&robot_pose.pa);
 
-	robot_data.rpm_right = (float)fVelocityRightRpm;   // Motor RPM
-	robot_data.rpm_left  = (float)fVelocityLeftRpm;
+		//but the pose we want in odom frame, so the multiplication (cos, sin) is done here
+    	robot_pose.px += robot_pose.vx * cos(robot_pose.pa)* fSamplePeriod;
+    	robot_pose.py += robot_pose.vx * sin(robot_pose.pa)* fSamplePeriod;
+    	//ROS_INFO("Pos x = %lf, Pos y = %lf, heading = %lf",robot_pose.px,robot_pose.py,robot_pose.pa);
+    pthread_mutex_unlock(&mutex_odometry);
+
+    	robot_data.rpm_right = (float)fVelocityRightRpm;// Motor RPM
+    	robot_data.rpm_left  = (float)fVelocityLeftRpm;
 
 }
 
@@ -587,13 +725,6 @@ void guardian_controller::SetVWRef()
 	channelA = (int) iEncoderDir * (robot_data.v_ref_mps * dMpsToRef + uv);
     channelB = (int) iAngularSpeedDir * (robot_data.w_ref_rads * (dMpsToRef * fDistanceBetweenWheels) * 0.5 + uw );
 
-	//channelA = (int) (GUARDIAN_CONTROLLER_ENCODER_DIR * (robot_data.v_ref_mps * dMpsToRef + uv));
-    //channelB = (int) (-GUARDIAN_CONTROLLER_ENCODER_DIR * (robot_data.w_ref_rads * (dMpsToRef / fDistanceBetweenWheels) + uw ));
-
-	// ROS_INFO("Channel A (%d) = %f * (%lf * %lf + %d)", channelA, GUARDIAN_CONTROLLER_ENCODER_DIR, robot_data.v_ref_mps, dMpsToRef, uv);
-    // ROS_INFO("Channel B (%d) = %f * (%lf * (%lf / %lf) + %d)", channelB, GUARDIAN_CONTROLLER_ENCODER_DIR, robot_data.w_ref_rads, dMpsToRef,  fDistanceBetweenWheels, uw);
-    //ROS_INFO("SetVWRef: l= %.3lf (%d), w = %.3lf (%d)", robot_data.v_ref_mps, channelA, robot_data.w_ref_rads, channelB);
-
 	WriteMotorSpeed(channelA, channelB);
 
 }
@@ -604,11 +735,6 @@ void guardian_controller::SetVWRef()
 */
 void guardian_controller::InitState()
 {
-    // Enter roboteq communication mode
-    //EnterRS232Mode();
-
-    //WriteMotorControlMode(MCM_MIXED_CLOSED);
-
     // Reset Encoders (avoid initial odometry error due to wrong initialization
     if (ResetEncoders()!=OK) {
         this->iErrorType= GUARDIAN_CONTROLLER_ERROR_SERIALCOMM;
@@ -634,10 +760,10 @@ void guardian_controller::ReadyState()
     // Send cmd and process response
     if (ReadEncoders() == OK){
         UpdateOdometry();
-	}else {
+	}/*else {
        this->iErrorType = GUARDIAN_CONTROLLER_ERROR_SERIALCOMM;
        SwitchToState(FAILURE_STATE);
-    }
+    }*/	
 
     if (robot_data.bMotorsEnabled) {
         // Control robot axes
@@ -713,16 +839,6 @@ void guardian_controller::FailureState(){
 				}
 
 				break;
-
-/*
-			case ERROR_TIMEOUT:
-				log->AddError((char*)"guardian_controller::FailureState: Recovering from failure state (ERROR_TIMEOUT.)");
-				printf("guardian_controller::FailureState: Recovering from failure state (ERROR_TIMEOUT.)\n");
-				Close();
-				usleep(timer);
-				Open();
-				break;
-*/
 		}
 		recovery_cycles = 0;
 	}
@@ -751,18 +867,21 @@ void guardian_controller::ToggleMotorPower(bool val)
 */
 void guardian_controller::GetOdometry(double *vx, double *vy, double *va, double *px, double *py, double *pa)
 {
-    //pthread_mutex_lock(&mutex_odometry);
+    pthread_mutex_lock(&mutex_odometry);
         // Return values
         *vx = robot_pose.vx; *vy=robot_pose.vy; *va=robot_pose.va;
         *px=robot_pose.px; *py=robot_pose.py; *pa=robot_pose.pa;
-    //pthread_mutex_unlock(&mutex_odometry);
+    pthread_mutex_unlock(&mutex_odometry);
 }
 
 /*!	\fn pose guardian_controller::GetPose()
 	* Returns the Pose (pos & vel)
 */
 pose guardian_controller::GetPose(){
-    return robot_pose;
+	pthread_mutex_lock(&mutex_odometry);
+	pose pose_temp = robot_pose;
+	pthread_mutex_unlock(&mutex_odometry);
+    return pose_temp;
 }
 
 /*!	\fn void guardian_controller::ResetOdometry()
@@ -771,14 +890,14 @@ pose guardian_controller::GetPose(){
 void guardian_controller::ResetOdometry(){
 
 	// Reset player local copy of the robot odometry
-	//pthread_mutex_lock(&mutex_odometry);
+	pthread_mutex_lock(&mutex_odometry);
 		robot_pose.px = 0;
 		robot_pose.py = 0;
 		robot_pose.pa = 0;
 		robot_pose.vx = 0;
 		robot_pose.vy = 0;
 		robot_pose.va = 0;
-	//pthread_mutex_unlock(&mutex_odometry);
+	pthread_mutex_unlock(&mutex_odometry);
 }
 
 /*!	\fn void guardian_controller::ModifyOdometry(double px,  double py,  double pa)
@@ -787,11 +906,11 @@ void guardian_controller::ResetOdometry(){
 void guardian_controller::ModifyOdometry(  double px,  double py,  double pa )
 {
 	// Reset player local copy of the robot odometry
-	//pthread_mutex_lock(&mutex_odometry);
+	pthread_mutex_lock(&mutex_odometry);
 		robot_pose.px = px;
 		robot_pose.py = py;
 		robot_pose.pa = pa;
-	//pthread_mutex_unlock(&mutex_odometry);
+	pthread_mutex_unlock(&mutex_odometry);
 }
 
 /*!	\fn void guardian_controller::SetSpeedLimits()
@@ -813,7 +932,7 @@ void guardian_controller::SetSpeedLimits(float lin_speed, float ang_speed){
 */
 void guardian_controller::SetSpeed(double lin_speed, double ang_speed){
 	//ROS_INFO("SetSpeed: %lf, %lf", lin_speed, ang_speed);
-	//pthread_mutex_lock(&mutex_odometry);
+	pthread_mutex_lock(&mutex_odometry);
         // Check the limits of the desired velocity
         if(fabs(lin_speed) > robot_data.max_linear_speed){
             if(lin_speed < 0.0)
@@ -831,7 +950,7 @@ void guardian_controller::SetSpeed(double lin_speed, double ang_speed){
         }else
             robot_data.w_ref_rads = ang_speed;  // Sets desired angular speed
 
-	//pthread_mutex_unlock(&mutex_odometry);
+	pthread_mutex_unlock(&mutex_odometry);
 	
 }
 
@@ -852,15 +971,15 @@ int guardian_controller::GetEncoder(char enc)
     switch (enc) {
         case 'L':
         case 'l':
-            //pthread_mutex_lock(&mutex_encoders);
+            pthread_mutex_lock(&mutex_encoders);
                 encoder_value = robot_data.encoder_left;
-            //pthread_mutex_unlock(&mutex_encoders);
+            pthread_mutex_unlock(&mutex_encoders);
             break;
         case 'R':
         case 'r':
-            //pthread_mutex_lock(&mutex_encoders);
+            pthread_mutex_lock(&mutex_encoders);
                 encoder_value = robot_data.encoder_right;
-            //pthread_mutex_unlock(&mutex_encoders);
+            pthread_mutex_unlock(&mutex_encoders);
             break;
         }
 
@@ -1040,18 +1159,6 @@ void guardian_controller::ConfigureConstants(){
 
 	dMpsToRef = dMpsToWheelRpm * dWheelRpmToRpm * dRpmToRef;        // Conversion from MPS to motor Reference
 	dRefToMps = 1.0 / dMpsToRef;                                      // Conversion from Reference to MPS
-
-    /*dWheelRpmToMps = (fDiameterWheel * Pi) / 60.0;          // conversion value from wheels rpm to mps = PI*Diameter/60
-    dRpmToRef = GUARDIAN_CONTROLLER_REF_FOR_MAX_RPM / MOTOR_MAX_RPM;     // conversion from MOTOR RPM to Reference
-
-    dMpsToWheelRpm = 1 / dWheelRpmToMps;                         // conversion from MPS to wheels RPM
-    dWheelRpmToRpm = MOTOR_GEARBOX / dConversionFactor;          // conversion from Wheel RPM to motor RPM
-    dRpmToWheelRpm = 1/ dWheelRpmToRpm;
-
-    dRefToRpm = 1 / dRpmToRef;                               // Conversion from Reference to MOTOR RPM
-
-    dMpsToRef = dMpsToWheelRpm * dWheelRpmToRpm * dRpmToRef;        // Conversion from MPS to motor Reference
-    dRefToMps = 1 / dMpsToRef;                                      // Conversion from Reference to MPS*/
 
     // PI parameters for velocity control. D parameter is not used
     pidMotor.KpL = (GUARDIAN_CONTROLLER_MOTOR_DEF_MAX_REF_SPEED / 2.0)* pidMotor.KpL_divisor;        // P constant for linear velocity
