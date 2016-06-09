@@ -270,6 +270,7 @@ int main(int argc, char** argv){
 	float left_rpm = 0.0, right_rpm = 0.0;
 	double inc_left_wheel = 0.0, inc_right_wheel = 0.0;
 	std::string back_left_wheel_joint_name_, back_right_wheel_joint_name_, front_left_wheel_joint_name_, front_right_wheel_joint_name_;
+	std::string odom_frame_id_, base_frame_id_;
 	
 	//
 	// The Updater class advertises to /diagnostics, and has a
@@ -314,6 +315,8 @@ int main(int argc, char** argv){
 	pn.param<std::string>("back_right_wheel_joint_name", back_right_wheel_joint_name_, "joint_back_right_wheel");
 	pn.param<std::string>("front_left_wheel_joint_name", front_left_wheel_joint_name_, "joint_front_left_wheel");
 	pn.param<std::string>("front_right_wheel_joint_name", front_right_wheel_joint_name_, "joint_front_right_wheel");
+	pn.param<std::string>("odom_frame_id", odom_frame_id_, "odom");
+	pn.param<std::string>("base_frame_id", base_frame_id_, "base_footprint");
 	
 	ROS_INFO("guardian_node::main: Motor dev = %s", sDevicePort.c_str());
 	ROS_INFO("guardian_node::main: Max Speed: v = %.2f m/s, w = %.2f d/s", max_linear_speed_, max_angular_speed_);
@@ -350,17 +353,13 @@ int main(int argc, char** argv){
 		//
 		// Setups and starts the component
 		 // Setup
-		while(guardian_hw_interface->Setup() == -1){
+		while(guardian_hw_interface->Setup() == -1 && ros::ok()){
 			sleep(t);
 			ROS_ERROR("Main: Error in guardian setup. Trying it every %d seconds", t);
 		}
 		if(guardian_hw_interface->Start()!= OK){
 		    ROS_ERROR("main: Error in guardian Start");
 		}
-		/*while(guardian_hw_interface->GetState() != READY_STATE){			
-			ROS_ERROR("Main: Waiting until READY_STATE (%s). Trying it every %d seconds", guardian_hw_interface->GetStateString(), 2);
-			sleep(2);
-		} */
 	}
 	
 	for(int i = 0; i < GUARDIAN_JOINTS; i++){
@@ -376,8 +375,6 @@ int main(int argc, char** argv){
 	robot_joints_.name[2] = back_right_wheel_joint_name_;
 	robot_joints_.name[3] = front_right_wheel_joint_name_;
 	
-
-	//ROS_ERROR("Main: Controller on %s", guardian_hw_interface->GetStateString());
 	// Define subscribers to obtain information through the sensors and joysticks
   	ros::Subscriber cmd_sub_ = pn.subscribe<geometry_msgs::Twist>("command", 1, cmdCallback); 
 	
@@ -411,28 +408,15 @@ int main(int argc, char** argv){
 	current_time = ros::Time::now();
 	last_time = ros::Time::now();
 	
-	ros::Rate r(desired_freq_);  // 50.0 
-	
-	//ROS_INFO("Main: Controller on %s", guardian_hw_interface->GetStateString());	
+	ros::Rate r(desired_freq_);  
 
-	//while( attemps < maxAttemps ) {
 
-	while( ros::ok() ){ // n.ok() && (guardian->GetCurrentState() == 1)
+	while( ros::ok() ){
 
 		current_time = ros::Time::now();	
 		
 		// Obtain the odometry 
 		robot_pose = guardian_hw_interface->GetPose();
-
-		//ROS_INFO("Guardian_node: ChangeRefFrame");
-		//ROS_WARN("*********************************\n");
-		//ROS_INFO("Guardian_node: Main 2");
-		//ROS_INFO("Px: %d Py: %d Pa: %d\n", px, py, pa);
-		//ROS_INFO("Temp: %d\n", guardian->GetTemp(1)) ;
-		//ROS_INFO("Voltage: %d\n", guardian->GetVoltage());
-		//ROS_INFO("GetEncoder(L): %f\n", guardian->GetEncoder('L') );
-		//ROS_INFO("GetEncoder(R): %f\n", guardian->GetEncoder('R') );
-		//ROS_WARN("*********************************\n");
 	
 		dt = (current_time - last_time).toSec();
 
@@ -442,8 +426,8 @@ int main(int argc, char** argv){
 			//first, we'll publish the transform over tf
 			geometry_msgs::TransformStamped odom_trans;
 			odom_trans.header.stamp = current_time;
-			odom_trans.header.frame_id = "odom";
-			odom_trans.child_frame_id = "base_footprint"; // base_link
+			odom_trans.header.frame_id = odom_frame_id_;
+			odom_trans.child_frame_id = base_frame_id_;
 
 			odom_trans.transform.translation.x = robot_pose.px;
 			odom_trans.transform.translation.y = robot_pose.py;
@@ -457,8 +441,8 @@ int main(int argc, char** argv){
 		//next, we'll publish the odometry message over ROS
 		nav_msgs::Odometry odom;
 		odom.header.stamp = current_time;
-		odom.header.frame_id = "odom";
-		odom.child_frame_id = "base_footprint"; // base_link
+		odom.header.frame_id = odom_frame_id_;
+		odom.child_frame_id = base_frame_id_;
 		
 		//set the position
 		odom.pose.pose.position.x = robot_pose.px;

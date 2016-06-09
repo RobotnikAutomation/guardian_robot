@@ -57,7 +57,6 @@
 #define MOTOR_DIAMETER_WHEEL			    0.36		    // m (Diameter by default of the wheel)
 #define MOTOR_DIAMETER_TRACK_WHEEL		    0.258		    // m (Diameter of the wheel used for "tracks" odometry)
 #define MOTOR_GEARBOX_TO_TRACK_FACTOR		21.0/15.0		// Factor applied to convert motor gearbox spins to track spin
-//#define MOTOR_RPM2MPS			            0.012790994     // conversion value from rpm to mps PI*Diameter/60          // 
 #define MOTOR_D_TRACKS_M	                0.448          	// theorical distance between motor tracks 
 #define MOTOR_D_WHEELS_M	                0.650           // theorical distance between motor wheels
 #define MOTOR_MAX_RPM                       2900.0           // Motor specs
@@ -226,6 +225,8 @@ class guardian_controller: public Component {
 		int iEncoderDir;
 		//! Sets the internal direction for the angular speed reference (values: -1, 1)
 		int iAngularSpeedDir;
+		//! Saves the time of the last error
+		ros::Time t_last_error;
 
     public:
 
@@ -350,7 +351,6 @@ class guardian_controller: public Component {
         //!	Updates robot's odometry
         void UpdateOdometry();
         //! Writes motors speed references
-        // OLD: void WriteMotorSpeed(double speedL, double speedR);
         void WriteMotorSpeed(int channel_a, int channel_b);
         //! AX3500 configured AB mixed, closed loop
         void SetVWRef();
@@ -366,6 +366,12 @@ class guardian_controller: public Component {
         float CalculateBattery(double voltage);
         //! Configs the constants parameters
         void ConfigureConstants();
+        //! Registers and error reading/writing on the controller
+        void CountError(int num_of_errors);
+        //! Resets the number of errors
+        void ResetErrors();
+        //! Returns whether there have been too many R/W errors
+        bool IsOnError();
 
         int sleepTime;
 };

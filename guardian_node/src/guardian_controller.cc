@@ -171,7 +171,7 @@ void guardian_controller::ReadBatteryVoltage(){
 
     status = roboteq->GetValue(_VOLTS, 2, volts);
     if(status != RQ_SUCCESS){
-        ROS_ERROR("guardian_controller::ReadBatteryVoltage: error = %d", status);
+        ROS_WARN("guardian_controller::ReadBatteryVoltage: error = %d", status);
     }else{
         robot_data.voltage = (float)volts/10.0;
         robot_data.battery = CalculateBattery(robot_data.voltage);
@@ -191,7 +191,7 @@ void guardian_controller::ReadTemperature(){
 
     status = roboteq->GetValue(_TEMP, temp);
     if(status != RQ_SUCCESS){
-        ROS_ERROR("guardian_controller::ReadTemperature: error = %d", status);
+        ROS_WARN("guardian_controller::ReadTemperature: error = %d", status);
     }else{
         //ROS_DEBUG("guardian_controller::ReadTemperature: Temp = %d ", temp);
         //robot_data.temperature[0]=ValToHSTemp(HexToDec(&buf[2],2));
@@ -212,7 +212,7 @@ void guardian_controller::ReadMotorControlMode(){
 
     status = roboteq->GetConfig(_MMOD, mode);
     if(status != RQ_SUCCESS){
-        ROS_ERROR("guardian_controller::ReadMotorControlMode: error = %d ", status);
+        ROS_WARN("guardian_controller::ReadMotorControlMode: error = %d ", status);
     }else{
         ROS_DEBUG("guardian_controller::ReadMotorControlMode: Mode =  %d\n", mode);
         motor_control_mode = mode;
@@ -256,7 +256,7 @@ void guardian_controller::WriteMotorControlMode(MotorControlMode mcm){
 
     status = roboteq->SetConfig(_MMOD, mode);
     if(status != RQ_SUCCESS){
-        ROS_ERROR("guardian_controller::WriteMotorControlMode: error = %d", status);
+        ROS_WARN("guardian_controller::WriteMotorControlMode: error = %d", status);
     }else{
         ROS_DEBUG("guardian_controller::WriteMotorControlMode: Set mode %d", mode);
     }
@@ -280,7 +280,7 @@ int guardian_controller::ReadAnalogInput(int number){
     }
     status = roboteq->GetValue(_ANAIN, number, input);
     if(status != RQ_SUCCESS){
-        ROS_ERROR("guardian_controller::ReadAnalogInput: error = %d", status);
+        ROS_WARN("guardian_controller::ReadAnalogInput: error = %d", status);
     }else{
         ROS_DEBUG("guardian_controller::ReadAnalogInput: Input[%d] = %d", number, input);
         robot_data.analog_input[number-1] = (float)input/1000.0;    // Converts from mV to V
@@ -301,7 +301,7 @@ int guardian_controller::ReadDigitalInput(int number){
     int status = 0;
 
     if( (number <= 0) || (number > GUARDIAN_CONTROLLER_DIGITAL_INPUTS) ){
-        ROS_ERROR("guardian_controller::ReadDigitalInput: input %d out of range", number);
+        ROS_WARN("guardian_controller::ReadDigitalInput: input %d out of range", number);
         return -1;
     }
     status = roboteq->GetValue(_ANAIN, number, input);
@@ -435,6 +435,7 @@ void guardian_controller::WriteMotorSpeed(int channel_a, int channel_b){
 	status = roboteq->SetCommand(_GO, 1, channel_a);
     if( status != RQ_SUCCESS){
         ROS_WARN("guardian_controller::WriteMotorSpeed: Error setting channel A (error = %d)", status);
+        CountError(1);
     }else{
 
         sleepms(sleepTime);
@@ -442,6 +443,7 @@ void guardian_controller::WriteMotorSpeed(int channel_a, int channel_b){
         status = roboteq->SetCommand(_GO, 2, channel_b);
         if( status != RQ_SUCCESS){
             ROS_WARN("guardian_controller::WriteMotorSpeed: Error setting channel B (error = %d)", status);
+            CountError(1);
         }
 		
     }
@@ -451,6 +453,7 @@ void guardian_controller::WriteMotorSpeed(int channel_a, int channel_b){
     // Saves the last references sent to the channels
     robot_data.channel_A_ref = channel_a;
     robot_data.channel_B_ref = channel_b;
+
 
 }
 
@@ -760,7 +763,9 @@ void guardian_controller::ReadyState()
     // Send cmd and process response
     if (ReadEncoders() == OK){
         UpdateOdometry();
-	}/*else {
+	}else
+		CountError(1);
+	/*else {
        this->iErrorType = GUARDIAN_CONTROLLER_ERROR_SERIALCOMM;
        SwitchToState(FAILURE_STATE);
     }*/	
@@ -807,6 +812,11 @@ void guardian_controller::ReadyState()
 
 	token++;
 	
+	if(IsOnError()){
+		this->iErrorType = GUARDIAN_CONTROLLER_ERROR_SERIALCOMM;
+		SwitchToState(FAILURE_STATE);
+	}
+	
 }
 
 /*!	\fn void guardian_controller::FailureState()
@@ -836,6 +846,7 @@ void guardian_controller::FailureState(){
 				usleep(timer);
 				if (this->Open()==OK){                    
                     SwitchToState(INIT_STATE);
+                    ResetErrors();
 				}
 
 				break;
@@ -1287,3 +1298,41 @@ void guardian_controller::SetEncoderConfig(int config, int direction, int angula
         iChannelEncRight = 1;
     }
 }
+
+
+
+/*! \fn void guardian_controller::CountError(int num_of_errors)
+ * 	\brief Registers and error reading/writing on the controller
+*/
+void guardian_controller::CountError(int num_of_errors){
+	this->err_counter+= num_of_errors;
+	
+	t_last_error = ros::Time::now();
+}
+
+
+/*! \fn void guardian_controller::ResetErrors()
+ * 	\brief 
+*/
+void guardian_controller::ResetErrors(){
+	this->err_counter = 0;
+}
+
+//! Returns whether there have been too many R/W errors
+bool guardian_controller::IsOnError(){
+	int num_max_of_errors = (int)threadData.dDesiredHz;
+	if(this->err_counter > num_max_of_errors){
+		return true;		
+		//double threadData.dRealHz;
+	}else{
+		ros::Time t_now = ros::Time::now();
+		
+		if((t_now - t_last_error).toSec() > 2 * (1.0/threadData.dRealHz)){
+			ResetErrors();
+		}
+	}
+	
+	return false;
+}
+
+

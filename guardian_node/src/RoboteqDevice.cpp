@@ -233,7 +233,7 @@ int RoboteqDevice::IssueCommand(string commandType, string command, string args,
 		status = Write(commandType + command + " " + args + "\r");
 
 	if(status != RQ_SUCCESS) {
-		cout << "RoboteqDevice::IssueCommand: error Writing" << endl;
+		//cout << "RoboteqDevice::IssueCommand: error Writing" << endl;
 		return status;
 		}
 
@@ -241,7 +241,7 @@ int RoboteqDevice::IssueCommand(string commandType, string command, string args,
 
 	status = ReadAll(read);
 	if(status != RQ_SUCCESS) {
-		cout << "RoboteqDevice::IssueCommand: error Reading status = " << status << endl;
+		//cout << "RoboteqDevice::IssueCommand: error Reading status = " << status << endl;
 		return status;
 		}
 
