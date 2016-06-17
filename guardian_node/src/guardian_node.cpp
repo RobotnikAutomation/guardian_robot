@@ -309,7 +309,7 @@ int main(int argc, char** argv){
 	pn.param("encoder_config", encoder_config_, ROBOTEQ_DEFAULT_ENCODER_CONF);
 	pn.param("encoder_dir", encoder_dir_, ROBOTEQ_DEFAULT_ENCODER_DIR);
 	pn.param("angular_dir", angular_dir_, ROBOTEQ_DEFAULT_ANGULAR_DIR);
-	pn.param("publish_tf", publish_tf_, publish_tf_);
+	pn.param("publish_tf", publish_tf_, false);
 	pn.param("desired_freq", desired_freq_, 20.0);
 	pn.param<std::string>("back_left_wheel_joint_name", back_left_wheel_joint_name_, "joint_back_left_wheel");
 	pn.param<std::string>("back_right_wheel_joint_name", back_right_wheel_joint_name_, "joint_back_right_wheel");
@@ -324,9 +324,10 @@ int main(int argc, char** argv){
 	ROS_INFO("guardian_node::main: diameter_wheels: %.3f m", diameter_wheels_);
 	ROS_INFO("guardian_node::main: Distance between wheels:  %.3f m", distance_between_wheels_);
 	ROS_INFO("guardian_node::main: Encoder config: %d, dir: %d, angular_dir = %d", encoder_config_, encoder_dir_, angular_dir_);
-	ROS_INFO("guardian_node::main: Publish TF:%s", publish_tf_?"true":"false");
+	ROS_INFO("guardian_node::main: Publish TF: %s", publish_tf_?"true":"false");
+	ROS_INFO("guardian_node::main: desired freq: %.2lf", desired_freq_);
 	// Interface creation (Closed Loop Mixed Velocity Control)
-	guardian_hw_interface = new guardian_controller((char*)sDevicePort.c_str(), 20.0);		
+	guardian_hw_interface = new guardian_controller((char*)sDevicePort.c_str(), desired_freq_);		
 	// Applying encoder config...
 	guardian_hw_interface->SetEncoderConfig(encoder_config_, encoder_dir_, angular_dir_);
 

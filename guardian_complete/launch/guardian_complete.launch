@@ -1,6 +1,14 @@
 <?xml version="1.0"?>
 <launch>
 
+  <arg name="urdf_file" default="$(find xacro)/xacro.py '$(find guardian_description)/urdf/gball.urdf.xacro'" />
+ 
+  <param name="robot_description" command="$(arg urdf_file)" />
+  <!-- Combine joint values -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher">
+  	<param name="publish_frequency" value="50"/>
+  </node>
+  
   <!-- Launches openni kinect  node -->
   <!-- include file="$(find openni_launch)/launch/openni.launch" / -->
 
@@ -23,16 +31,16 @@
   </node-->
 
   <!-- RLY08 I/O device -->
-  <include file="$(find rly_08)/launch/rly_08.launch"/>
+  <!--include file="$(find rly_08)/launch/rly_08.launch"/-->
   
   <!-- Robotnik tilt laser (launches also Hokuyo node) -->
   <!--include file="$(find robotnik_tilt_laser)/launch/robotnik_tilt.launch"/-->  
  
   <!-- Launches guardian  node -->
-  <include file="$(find guardian_complete)/launch/guardian_roboteq.launch" />
+  <!--include file="$(find guardian_complete)/launch/guardian_roboteq.launch" /-->
 
   <!-- Launches guardian  pad -->
-  <include file="$(find guardian_complete)/launch/guardian_pad.launch" />
+  <!--include file="$(find guardian_complete)/launch/guardian_pad.launch" /-->
   
   <!-- Launches pixhawk -->
   <!--include file="$(find guardian_complete)/launch/imu_pixhawk.launch" /-->
