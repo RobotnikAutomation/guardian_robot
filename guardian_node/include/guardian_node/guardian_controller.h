@@ -61,6 +61,7 @@
 #define MOTOR_D_WHEELS_M	                0.650           // theorical distance between motor wheels
 #define MOTOR_MAX_RPM                       2900.0           // Motor specs
 #define WHEELS_MAX_RPM                      (MOTOR_MAX_RPM * MOTOR_GEARBOX) // Max RPM of each wheel depending on the motor's specs
+#define WHEELS_MAX_CPS                      (MOTOR_MAX_RPM * MOTOR_GEARBOX*MOTOR_COUNTS_PER_REV)/60.0 // Max counts per second
 #define DISTANCE_PER_COUNT 					3.14*0.2/57110  //tracks
 
 #define GUARDIAN_CONTROLLER_REF_FOR_MAX_RPM              1000

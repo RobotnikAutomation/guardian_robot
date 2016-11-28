@@ -469,7 +469,13 @@ double guardian_controller::CalculateDeltaDistance(double *delta_left, double *d
 		int diff= 0;
 		double rev_per_min_left = 0.0, rev_per_min_right=0.0;
 		static bool bfirst = true;
-
+		
+		int max_enconder_inc = 0;
+		// Max encoder increment based on read frequency
+		if(threadData.dRealHz > 0)
+			max_enconder_inc = WHEELS_MAX_CPS / threadData.dRealHz;
+		else
+			max_enconder_inc = WHEELS_MAX_CPS / threadData.dDesiredHz;
 
 		// ABSOLUTE ENCODERS
 		if(this->encoders_mode == GUARDIAN_CONTROLLER_ABSOLUTE_ENCODERS){
@@ -482,9 +488,25 @@ double guardian_controller::CalculateDeltaDistance(double *delta_left, double *d
 				bfirst = false;
 			}else{
 				inc_left_counts = robot_data.encoder_left - robot_data.last_encoder_left;
+			    
+			    if(abs(inc_left_counts) > max_enconder_inc) {	// Check wrong data
+	                ROS_ERROR("guardian_controller::CalculateRPM: Absolute - error reading left encoder: inc = %d > max %d", inc_left_counts, max_enconder_inc);
+					inc_left_counts = 0;
+				}else{
+					robot_data.last_encoder_left = robot_data.encoder_left;
+	            }
+	            
 			    inc_right_counts = robot_data.encoder_right - robot_data.last_encoder_right;
-			    robot_data.last_encoder_left = robot_data.encoder_left;
-			    robot_data.last_encoder_right = robot_data.encoder_right;
+			    
+			     if(abs(inc_right_counts) > max_enconder_inc) {	// Check wrong data
+	                ROS_ERROR("guardian_controller::CalculateRPM: Absolute - error reading right encoder: inc = %d > max %d", inc_right_counts, max_enconder_inc);
+					inc_right_counts = 0;
+				}else{
+					robot_data.last_encoder_right = robot_data.encoder_right;
+	            }
+			    
+			    //robot_data.last_encoder_left = robot_data.encoder_left;
+			    //robot_data.last_encoder_right = robot_data.encoder_right;
 			}
 	        pthread_mutex_unlock(&mutex_encoders);
 	        }
