@@ -1,0 +1,11 @@
+# odometry : wheels or tracks
+odometry_type: wheels
+diameter_wheels: 0.36
+distance_between_wheels: 0.672
+encoder_config: 1
+encoder_dir: 1
+angular_dir: -1
+back_left_wheel_joint_name: joint_back_left_wheel 
+back_right_wheel_joint_name: joint_back_right_wheel 
+front_left_wheel_joint_name: joint_front_left_wheel 
+front_right_wheel_joint_name: joint_front_right_wheel 
