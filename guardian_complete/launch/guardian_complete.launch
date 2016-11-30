@@ -3,7 +3,7 @@
   
   <include file="$(find guardian_description)/launch/guardian_state_robot.launch" />
   
-  <!-- Launches openni kinect  node -->
+  <!-- Launches RGBD sensor -->
   <!--include file="$(find guardian_complete)/launch/sensors/xtion_pro.launch"/-->
 
   <!-- Launches modbus_io node -->
@@ -29,7 +29,7 @@
   <include file="$(find guardian_complete)/launch/guardian_pad.launch" />
   
   <!-- Launches pixhawk -->
-  <!--include file="$(find guardian_complete)/launch/imu_pixhawk.launch" /-->
+  <!--include file="$(find guardian_complete)/launch/sensors/pixhawk.launch"/-->
   
   <!-- WAM Teleop Node -->
   <!--node pkg="wam_teleop" type="wam_joystick_teleop" name="wam_joystick_teleop" output="screen"/-->

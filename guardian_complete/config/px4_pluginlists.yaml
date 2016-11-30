@@ -1,0 +1,19 @@
+plugin_blacklist:
+- safety_area
+- image_pub
+- vibration
+- distance_sensor
+- vision_speed
+- vision_pose
+- px4flow
+- mocap
+- image
+- setpoint_position
+- setpoint_attitude
+- setpoint_accel
+- safety_area
+- local_position
+- 3dr_radio
+
+plugin_whitelist: []
+#- 'sys_*'
