@@ -4,7 +4,7 @@
   <include file="$(find guardian_description)/launch/guardian_state_robot.launch" />
   
   <!-- Launches RGBD sensor -->
-  <!--include file="$(find guardian_complete)/launch/sensors/xtion_pro.launch"/-->
+  <include file="$(find guardian_complete)/launch/sensors/xtion_pro.launch"/>
 
   <!-- Launches modbus_io node -->
   <!--param name="modbus_io_node/ip_address" value="192.168.2.185" />
@@ -14,10 +14,10 @@
   <!--include file="$(find axis_camera)/axis_ptz.launch" /-->
 
   <!-- HOKUYO -->
-  <!--include file="$(find guardian_complete)/launch/sensors/hokuyo.launch"/-->
+  <include file="$(find guardian_complete)/launch/sensors/hokuyo.launch"/>
 
   <!-- RLY08 I/O device -->
-  <!--include file="$(find rly_08)/launch/rly_08.launch"/-->
+  <include file="$(find rly_08)/launch/rly_08.launch"/>
   
   <!-- Robotnik tilt laser (launches also Hokuyo node) -->
   <!--include file="$(find robotnik_tilt_laser)/launch/robotnik_tilt.launch"/-->  
@@ -25,11 +25,14 @@
   <!-- Launches guardian  node -->
   <include file="$(find guardian_complete)/launch/guardian_roboteq.launch" />
 
+  <!-- robot_localization will pubish transform odom->base_footprint -->
+  <include file="$(find guardian_complete)/launch/robot_localization_odom.launch"/>
+
   <!-- Launches guardian  pad -->
   <include file="$(find guardian_complete)/launch/guardian_pad.launch" />
   
   <!-- Launches pixhawk -->
-  <!--include file="$(find guardian_complete)/launch/sensors/pixhawk.launch"/-->
+  <include file="$(find guardian_complete)/launch/sensors/pixhawk.launch"/>
   
   <!-- WAM Teleop Node -->
   <!--node pkg="wam_teleop" type="wam_joystick_teleop" name="wam_joystick_teleop" output="screen"/-->
