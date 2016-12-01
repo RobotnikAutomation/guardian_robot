@@ -26,13 +26,14 @@
   <include file="$(find guardian_complete)/launch/guardian_roboteq.launch" />
 
   <!-- robot_localization will pubish transform odom->base_footprint -->
-  <include file="$(find guardian_complete)/launch/robot_localization_odom.launch"/>
+  <!--include file="$(find guardian_complete)/launch/robot_localization_odom.launch"/-->
 
   <!-- Launches guardian  pad -->
   <include file="$(find guardian_complete)/launch/guardian_pad.launch" />
   
   <!-- Launches pixhawk -->
   <!--include file="$(find guardian_complete)/launch/sensors/pixhawk.launch"/-->
+  <!--node pkg="robot_localization_utils" type="rl_utils" name="rl_utils"/-->
   
   <!-- WAM Teleop Node -->
   <!--node pkg="wam_teleop" type="wam_joystick_teleop" name="wam_joystick_teleop" output="screen"/-->

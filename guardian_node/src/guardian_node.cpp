@@ -307,6 +307,7 @@ int main(int argc, char** argv){
 	std::string sDefaultOdometryType(GUARDIAN_DEFAULT_ODOMETRY);
 	int encoder_config_, encoder_dir_, angular_dir_;
 	bool publish_tf_ = false;
+	bool use_imu_ = true;
 	float left_rpm = 0.0, right_rpm = 0.0;
 	double inc_left_wheel = 0.0, inc_right_wheel = 0.0;
 	std::string back_left_wheel_joint_name_, back_right_wheel_joint_name_, front_left_wheel_joint_name_, front_right_wheel_joint_name_;
@@ -351,6 +352,7 @@ int main(int argc, char** argv){
 	pn.param("angular_dir", angular_dir_, ROBOTEQ_DEFAULT_ANGULAR_DIR);
 	pn.param("publish_tf", publish_tf_, false);
 	pn.param("desired_freq", desired_freq_, 20.0);
+	pn.param("use_imu", use_imu_, true);
 	pn.param<std::string>("back_left_wheel_joint_name", back_left_wheel_joint_name_, "joint_back_left_wheel");
 	pn.param<std::string>("back_right_wheel_joint_name", back_right_wheel_joint_name_, "joint_back_right_wheel");
 	pn.param<std::string>("front_left_wheel_joint_name", front_left_wheel_joint_name_, "joint_front_left_wheel");
@@ -365,6 +367,7 @@ int main(int argc, char** argv){
 	ROS_INFO("guardian_node::main: Distance between wheels:  %.3f m", distance_between_wheels_);
 	ROS_INFO("guardian_node::main: Encoder config: %d, dir: %d, angular_dir = %d", encoder_config_, encoder_dir_, angular_dir_);
 	ROS_INFO("guardian_node::main: Publish TF: %s", publish_tf_?"true":"false");
+	ROS_INFO("guardian_node::main: Use IMU: %s", use_imu_?"true":"false");
 	ROS_INFO("guardian_node::main: desired freq: %.2lf", desired_freq_);
 	// Interface creation (Closed Loop Mixed Velocity Control)
 	guardian_hw_interface = new guardian_controller((char*)sDevicePort.c_str(), desired_freq_);		
@@ -418,7 +421,8 @@ int main(int argc, char** argv){
 	
 	// Define subscribers to obtain information through the sensors and joysticks
   	ros::Subscriber cmd_sub_ = pn.subscribe<geometry_msgs::Twist>("command", 1, cmdCallback); 
-	imu_sub_ = pn.subscribe<sensor_msgs::Imu>("/imu/data", 1, imuCallback);	
+	if(use_imu_)
+		imu_sub_ = pn.subscribe<sensor_msgs::Imu>("/imu/data", 1, imuCallback);	
 	
 	//ros::Subscriber io_sub_ = n.subscribe(modbus_io_topic_, 1, ioCallback);
 
