@@ -1,6 +1,6 @@
 # odometry : wheels or tracks
 odometry_type: wheels
-diameter_wheels: 0.36
+diameter_wheels: 0.355
 distance_between_wheels: 0.672
 encoder_config: 1
 encoder_dir: 1

@@ -212,6 +212,10 @@ bool set_odometry(guardian_node::set_odometry::Request &req,
 {
 	ROS_INFO("guardian_node::set_odometry: request -> x = %f, y = %f, a = %f", req.x, req.y, req.orientation);
 
+	// Reset yaw position
+	//imu_info_.initial_yaw = imu_info_.last_yaw;
+	imu_info_.first_yaw_read = false;
+
 	guardian_hw_interface->ModifyOdometry(req.x, req.y, req.orientation);
 	res.ret = true;
 	
