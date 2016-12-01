@@ -245,6 +245,8 @@ class guardian_controller: public Component {
         void ResetOdometry();
         //! Set new odometry value (pose)
         void ModifyOdometry(  double px,  double py,  double pa );
+        //! Set new odometry value (yaw)
+        void ModifyOdometry( double yaw );
         //! Set robot left and right track references from linear and angular values
         void SetSpeed(double lin_speed, double ang_speed);
         //! Set robot linear and angular speed limits

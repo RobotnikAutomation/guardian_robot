@@ -946,6 +946,17 @@ void guardian_controller::ModifyOdometry(  double px,  double py,  double pa )
 	pthread_mutex_unlock(&mutex_odometry);
 }
 
+/*!	\fn void guardian_controller::ModifyOdometry(double yaw)
+	* Set new odometry yaw
+*/
+void guardian_controller::ModifyOdometry( double yaw )
+{
+	// Reset player local copy of the robot odometry
+	pthread_mutex_lock(&mutex_odometry);
+		robot_pose.pa = yaw;
+	pthread_mutex_unlock(&mutex_odometry);
+}
+
 /*!	\fn void guardian_controller::SetSpeedLimits()
 	* Set robot linear and angular speed limits
 	* linear speed in m/s

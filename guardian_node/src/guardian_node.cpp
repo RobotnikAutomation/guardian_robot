@@ -73,7 +73,7 @@ double v, w = 0.0; 									// Callback cmd vel variables
 std::string sOdometryType_; 						// Type of odometry used by the robot
 double dt = 0.0;									// Odometry variables
 ros::Publisher joint_state_pub_;					// Joint State publisher
-
+ros::Subscriber imu_sub_;
 
 // Recovery attemps control
 int maxAttemps = 10000;
@@ -93,11 +93,25 @@ double orientation_y_ = 0.0;
 double orientation_z_ = 0.0;
 double orientation_w_ = 0.0;
 
+struct ImuInfo
+{
+    double initial_yaw;
+    double delta_yaw;
+    double last_yaw;
+    bool first_yaw_read;
+} imu_info_;
 
 diagnostic_updater::HeaderlessTopicDiagnostic *sus_command_freq, *sus_io_freq; // Diagnostic to control the frequency of topics
 
 ros::Time last_command_time;					// Last moment when the component received a command
 
+
+double radNorm( double yaw )
+{
+    if (yaw>3.1415926535) yaw -= 2*3.1415926535;
+    if (yaw<-3.1415926535) yaw += 2*3.1415926535;
+    return yaw;
+}
 
 //////////////////////////
 // Callback definitions //
@@ -112,6 +126,31 @@ void cmdCallback(const geometry_msgs::Twist::ConstPtr& cmd_vel){
 }
 
 
+void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
+{
+   
+	double roll_msg, pitch_msg, yaw_msg;
+	float odometry_yaw;
+
+	// Get Yaw
+	tf::Quaternion q(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
+	tf::Matrix3x3(q).getRPY(roll_msg, pitch_msg, yaw_msg);
+
+	if(!imu_info_.first_yaw_read)
+	{
+		imu_info_.initial_yaw = yaw_msg;
+		imu_info_.first_yaw_read = true;		
+	}
+	else
+		imu_info_.delta_yaw = yaw_msg - imu_info_.last_yaw;
+ 
+	// Store last imu msg
+	imu_info_.last_yaw = yaw_msg;
+
+	// Update odometry
+	odometry_yaw = radNorm(imu_info_.last_yaw - imu_info_.initial_yaw);
+	guardian_hw_interface->ModifyOdometry(odometry_yaw);
+}
 
 //! Converts radians to degrees
 double RTOD(double val){
@@ -122,6 +161,7 @@ double RTOD(double val){
 double DTOR(double val){
     return val*Pi/180.0;
 }
+
 
 //! Check the robot's state and modifies the guardian_state variable
 void CheckRobotState(){
@@ -378,6 +418,7 @@ int main(int argc, char** argv){
 	
 	// Define subscribers to obtain information through the sensors and joysticks
   	ros::Subscriber cmd_sub_ = pn.subscribe<geometry_msgs::Twist>("command", 1, cmdCallback); 
+	imu_sub_ = pn.subscribe<sensor_msgs::Imu>("/imu/data", 1, imuCallback);	
 	
 	//ros::Subscriber io_sub_ = n.subscribe(modbus_io_topic_, 1, ioCallback);
 
@@ -404,6 +445,12 @@ int main(int argc, char** argv){
 	// For IO topic 
 	double min_io_freq = 10.0; // If you update these values, the
   	double max_io_freq = 50.0; // HeaderlessTopicDiagnostic will use the new values.
+
+	// IMU info
+	imu_info_.delta_yaw = 0.0;
+	imu_info_.initial_yaw = 0.0;
+	imu_info_.last_yaw = 0.0;
+	imu_info_.first_yaw_read = false;
 	
 	ros::Time current_time, last_time;
 	current_time = ros::Time::now();
