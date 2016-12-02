@@ -9,7 +9,7 @@ button_dead_man: 11
 button_output_1: 15
 button_output_2: 13
 output_1: 1
-output_2: 3
+output_2: 2
 button_ptz_tilt_up: 4
 button_ptz_tilt_down: 6
 button_ptz_pan_right: 5
