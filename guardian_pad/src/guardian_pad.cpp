@@ -151,11 +151,11 @@ GuardianPad::GuardianPad():
 	nh_.param("button_speed_down", speed_down_button_, speed_down_button_); //5 Thrustmaster
 	
 	// DIGITAL OUTPUTS CONF
-	nh_.param("cmd_service_io", cmd_service_io_, cmd_service_io_);
-	nh_.param("button_output_1", button_output_1_, button_output_1_);
-	nh_.param("button_output_2", button_output_2_, button_output_2_);
-	nh_.param("output_1", output_1_, output_1_);
-	nh_.param("output_2", output_2_, output_2_);
+	nh_.param("cmd_service_io", cmd_service_io_, std::string("rly_08_node/set_digital_outputs"));
+	nh_.param("button_output_1", button_output_1_, 2);
+	nh_.param("button_output_2", button_output_2_, 1);
+	nh_.param("output_1", output_1_, 1);
+	nh_.param("output_2", output_2_, 2);
 	// PANTILT-ZOOM CONF
 	nh_.param("cmd_topic_ptz", cmd_topic_ptz_, cmd_topic_ptz_);
 	nh_.param("button_ptz_tilt_up", ptz_tilt_up_, ptz_tilt_up_);
@@ -193,7 +193,6 @@ GuardianPad::GuardianPad():
 	pad_sub_ = nh_.subscribe<sensor_msgs::Joy>("joy", 10, &GuardianPad::padCallback, this);
 	
   	// Request service to activate / deactivate digital I/O
-  	//set_digital_outputs_client_ = nh_.serviceClient<modbus_io::write_digital_output>(cmd_service_io_);
 	set_digital_outputs_client_ = nh_.serviceClient<robotnik_msgs::set_digital_output>(cmd_service_io_);
 	bOutput1 = bOutput2 = false;
 	// Advertises new service to enable/disable the pad
@@ -239,6 +238,7 @@ bool GuardianPad::EnableDisable(guardian_pad::enable_disable::Request &req, guar
  *	\brief Method call when receiving a message from the topic /joy
  *
  */
+ 
 void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
 	geometry_msgs::Twist vel;
@@ -248,10 +248,10 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 	//ROS_ERROR("EVENT JOY");	
   	// Actions dependant on dead-man button
  	if (joy->buttons[dead_man_button_] == 1) {
+
 		//ROS_ERROR("GuardianPan::padCallback: DEADMAN button %d", dead_man_button_);
 		// Set the current velocity level
 		if ( joy->buttons[speed_down_button_] == 1 ){
-
 			if(!bRegisteredButtonEvent[speed_down_button_]) 
 				if(current_vel > 0.1){
 		  			current_vel = current_vel - 0.1;
@@ -261,7 +261,7 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		}else{
 			bRegisteredButtonEvent[speed_down_button_] = false;
 		}
-		 
+	 
 		if (joy->buttons[speed_up_button_] == 1){
 			if(!bRegisteredButtonEvent[speed_up_button_])
 				if(current_vel < DEFAULT_MAX_LINEAR_SPEED){
@@ -273,17 +273,16 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		}else{
 			bRegisteredButtonEvent[speed_up_button_] = false;
 		}
-		 
-		vel.angular.x = current_vel*(a_scale_*joy->axes[angular_]);
-		vel.angular.y = current_vel*(a_scale_*joy->axes[angular_]);
+	 
+		vel.angular.x = 0.0;
+		vel.angular.y = 0.0;
 		vel.angular.z = current_vel*(a_scale_*joy->axes[angular_]);
 		vel.linear.x = current_vel*l_scale_*joy->axes[linear_];
-		vel.linear.y = current_vel*l_scale_*joy->axes[linear_];
-		vel.linear.z = current_vel*l_scale_*joy->axes[linear_];
+		vel.linear.y = 0.0;
+		vel.linear.z = 0.0;
 
 		// LIGHTS
 		if (joy->buttons[button_output_1_] == 1) {
-
 			if(!bRegisteredButtonEvent[button_output_1_]){
 				//ROS_INFO("GuardianPan::padCallback: OUTPUT1 button %d", button_output_1_);
 				/*modbus_io::write_digital_output write_do_srv;
@@ -305,7 +304,6 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		}
 
 		if (joy->buttons[button_output_2_] == 1) {
-
 			if(!bRegisteredButtonEvent[button_output_2_]){
 				//ROS_INFO("GuardianPan::padCallback: OUTPUT2 button %d", button_output_2_);
 				/*modbus_io::write_digital_output write_do_srv;
@@ -325,12 +323,12 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		}else{
 			bRegisteredButtonEvent[button_output_2_] = false;
 		}
-		 
+	 
 		// SPHERECAM
 		// TILT-MOVEMENTS (RELATIVE POS)
 		ptz.pan = ptz.tilt = ptz.zoom = 0.0;
 		ptz.relative = true;
-		if (joy->buttons[ptz_tilt_up_] == 1) {		
+		if (joy->buttons[ptz_tilt_up_] == 1) {	
 			if(!bRegisteredButtonEvent[ptz_tilt_up_]){
 				ptz.tilt = tilt_increment_;
 				//ROS_INFO("GuardianPan::padCallback: TILT UP");
@@ -353,7 +351,7 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		}
 		 
 		// PAN-MOVEMENTS (RELATIVE POS)
-		if (joy->buttons[ptz_pan_left_] == 1) {			
+		if (joy->buttons[ptz_pan_left_] == 1) {		
 			if(!bRegisteredButtonEvent[ptz_pan_left_]){
 				ptz.pan = -pan_increment_;
 				//ROS_INFO("GuardianPan::padCallback: PAN LEFT");
@@ -374,7 +372,7 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 		}else{
 			bRegisteredButtonEvent[ptz_pan_right_] = false;
 		}
-
+/*
 		// ZOOM Settings (RELATIVE)
 		if (joy->buttons[ptz_zoom_wide_] == 1) {			
 			if(!bRegisteredButtonEvent[ptz_zoom_wide_]){
@@ -396,7 +394,7 @@ void GuardianPad::padCallback(const sensor_msgs::Joy::ConstPtr& joy)
 			}
 		}else{
 			bRegisteredButtonEvent[ptz_zoom_tele_] = false;
-		}
+		}*/
 	}
    	else {
 		vel.angular.x = 0.0;	vel.angular.y = 0.0; vel.angular.z = 0.0;
