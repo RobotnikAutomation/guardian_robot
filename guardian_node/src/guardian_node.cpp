@@ -431,7 +431,7 @@ int main(int argc, char** argv){
 	//ros::Subscriber io_sub_ = n.subscribe(modbus_io_topic_, 1, ioCallback);
 
 	// Define publishers
-	ros::Publisher odom_pub = pn.advertise<nav_msgs::Odometry>("odom", 30);
+	ros::Publisher odom_pub = n.advertise<nav_msgs::Odometry>("odom", 30);
 	ros::Publisher state_pub = pn.advertise<guardian_node::guardian_state>("state", 30);
 	tf::TransformBroadcaster odom_broadcaster;
 	

@@ -8,7 +8,7 @@
 		<param name="publish_tf" value="True"/>
 
 		<!-- if use_imu=true, imu (/imu/data) will be fused in the robot odometry -->
-                <param name="use_imu" value="true"/>
+        <param name="use_imu" value="true"/>
 		<rosparam command="load" file="$(find guardian_node)/launch/guardian_conf.yaml" />
 	</node>
 
