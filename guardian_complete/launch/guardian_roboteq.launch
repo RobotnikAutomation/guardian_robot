@@ -1,12 +1,18 @@
 <?xml version="1.0"?>
 <launch>
+	<arg name="port" default="/dev/ttyUSB_ROBOTEQ"/>
+	<arg name="odometry_type" default="wheels"/> <!-- odom type: wheels or tracks -->
+
 	<node type="guardian_node_nxt" name="guardian_node" pkg="guardian_node" output="screen">
-		<param name="motor_dev" value="/dev/ttyUSB_ROB" type="string"/>
+		<param name="motor_dev" value="$(arg port)" type="string"/>
 		<param name="modbus_io_topic" value="/modbus_io/input_output" type="string"/>
 		<param name="max_linear_speed" value="1.5" type="double"/> <!-- m/s -->
 		<param name="max_angular_speed" value="300.0" type="double"/> <!-- degrees/s -->
 		<param name="publish_tf" value="true"/>
-		
+		<!-- odom type: wheels or tracks -->
+		<param name="odometry_type" value="$(arg odometry_type)" type="string"/>
+		<param name="odom_frame_id" value="odom" type="string"/>
+		<param name="base_frame_id" value="base_footprint" type="string"/>
 		<!-- if use_imu=true, imu (/imu/data) will be fused in the robot odometry -->
 		<param name="use_imu" value="true"/>
 		<rosparam command="load" file="$(find guardian_complete)/config/guardian_conf.yaml" />

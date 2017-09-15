@@ -7,8 +7,9 @@
     <arg name="tgt_system" default="1" />
     <arg name="tgt_component" default="1" />
     <arg name="log_output" default="screen" />
+    <arg name="imu_frame_id" default="imu_link"/>
 
-    <include file="$(find mavros)/launch/node.launch">
+    <include file="$(find guardian_complete)/launch/mavros_node.launch">
         <arg name="pluginlists_yaml" value="$(find guardian_complete)/config/px4_pluginlists.yaml" />
         <arg name="config_yaml" value="$(find mavros)/launch/px4_config.yaml" />
 
@@ -17,5 +18,6 @@
         <arg name="tgt_system" value="$(arg tgt_system)" />
         <arg name="tgt_component" value="$(arg tgt_component)" />
         <arg name="log_output" value="$(arg log_output)" />
+	<param name="~imu/frame_id" value="$(arg imu_frame_id)"/>
     </include>
 </launch>

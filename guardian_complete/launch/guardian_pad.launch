@@ -5,17 +5,18 @@
   <node name="joy" pkg="joy" type="joy_node" respawn="true">
     <param name="dev" type="string" value="/dev/input/js0" />
     <param name="deadzone" value="0.12" />
+    <param name="autorepeat_rate" value="5.0" />
   </node>
 
   <!-- Parameters -->
   <param name="cmd_topic_vel" value="/guardian_node/command" type="string"/>
   
   <param name="cmd_service_io" value="/rly_08_node/set_digital_outputs" type="string"/>
-  <!--<param name="cmd_service_io" value="/modbus_io/input_output" type="string"/>-->
+  <!-- param name="cmd_service_io" value="/modbus_io/input_output" type="string"/-->
   
   <param name="cmd_topic_ptz" value="/axis/cmd_ptz" type="string"/>
   
-  <rosparam command="load" file="$(find guardian_complete)/config/ps3.yaml" />
+  <rosparam command="load" file="$(find guardian_pad)/launch/logitech.yaml" />
   <node name="guardian_pad" pkg="guardian_pad" type="guardian_pad" output="screen"/>
   
   <!-- node name="guardian_pad" pkg="guardian_pad" type="guardian_pad" args="load thrustmaster.yaml" / --> 

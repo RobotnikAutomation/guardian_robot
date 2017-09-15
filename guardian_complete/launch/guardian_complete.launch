@@ -17,7 +17,7 @@
   <!--include file="$(find guardian_complete)/launch/sensors/hokuyo.launch"/-->
 
   <!-- RLY08 I/O device -->
-  <!--include file="$(find rly_08)/launch/rly_08.launch"/-->
+  <include file="$(find rly_08)/launch/rly_08.launch"/>
   
   <!-- Robotnik tilt laser (launches also Hokuyo node) -->
   <!--include file="$(find robotnik_tilt_laser)/launch/robotnik_tilt.launch"/-->  
@@ -32,7 +32,8 @@
   <include file="$(find guardian_complete)/launch/guardian_pad.launch" />
   
   <!-- Launches pixhawk -->
-  <!--include file="$(find guardian_complete)/launch/sensors/pixhawk.launch"/-->
+  <include file="$(find guardian_complete)/launch/sensors/pixhawk.launch"/>
+  <include file="$(find robot_localization_utils)/launch/rl_utils.launch"/>
   <!--node pkg="robot_localization_utils" type="rl_utils" name="rl_utils"/-->
   
   <!-- WAM Teleop Node -->
