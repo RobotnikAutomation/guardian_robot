@@ -149,7 +149,11 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
 
 	// Update odometry
 	odometry_yaw = radNorm(imu_info_.last_yaw - imu_info_.initial_yaw);
-	guardian_hw_interface->ModifyOdometry(odometry_yaw);
+	bool motion = guardian_hw_interface->InMotion();
+	if(motion){
+		guardian_hw_interface->ModifyOdometry(odometry_yaw);
+	}
+	
 }
 
 //! Converts radians to degrees
@@ -384,10 +388,11 @@ int main(int argc, char** argv){
 		// Applies the configuration to the driver
 		// For odom using tracks, the configuration is pre-defined by default
 		if(!sOdometryType_.compare(ODOMTYPE_TRACKS)){
-			distance_between_wheels_ = MOTOR_DIAMETER_TRACK_WHEEL;
+			distance_between_wheels_ = MOTOR_D_TRACKS_M;
 			diameter_wheels_ = MOTOR_DIAMETER_TRACK_WHEEL;	
 			distance_between_wheels_ *= ERROR_D_2;	// Applying error factor for odom calcs
 			guardian_hw_interface->SetConversionFactor(MOTOR_GEARBOX_TO_TRACK_FACTOR);
+			ROS_WARN("Using TRACKS! (%lf, D= %lf, factor = %lf)", distance_between_wheels_, diameter_wheels_, MOTOR_GEARBOX_TO_TRACK_FACTOR);
 		}
 		else{
 			distance_between_wheels_ *= ERROR_D_1;	// Applying error factor for odom calcs
