@@ -690,7 +690,8 @@ void guardian_controller::UpdateOdometry(){
 	v_right_mps = fVelocityRightRpm * dRpmToWheelRpm * dWheelRpmToMps;
 	linearSpeedMps = (v_right_mps + v_left_mps) / 2.0;			   		    // m/s
 	angularSpeedRads = (v_right_mps - v_left_mps) / fDistanceBetweenWheels;    //rad/s
-
+	
+    //	ROS_INFO("left=(%lf,%lf), right=(%lf,%lf) (rpm, rps)",fVelocityLeftRpm,v_left_mps, fVelocityRightRpm,v_right_mps);
     //Left and right track velocities
     robot_data.actSpeedLmps = v_left_mps;
     robot_data.actSpeedRmps = v_right_mps;
@@ -1367,5 +1368,10 @@ bool guardian_controller::IsOnError(){
 	
 	return false;
 }
-
-
+//! Returns true if the robot is in motion
+bool guardian_controller::InMotion(){
+    if(robot_data.rpm_left != 0 || robot_data.rpm_right != 0){
+        return true;
+    }
+    return false;
+}
