@@ -55,7 +55,7 @@
 #define MOTOR_COUNTS_PER_REV		     	2000            // =500 x 4 (in quadrature mode)
 #define MOTOR_GEARBOX					    1.0/40.0          // gearbox 1:40
 #define MOTOR_DIAMETER_WHEEL			    0.36		    // m (Diameter by default of the wheel)
-#define MOTOR_DIAMETER_TRACK_WHEEL		    0.258		    // m (Diameter of the wheel used for "tracks" odometry)
+#define MOTOR_DIAMETER_TRACK_WHEEL		    0.2		    // m (Diameter of the wheel used for "tracks" odometry)
 #define MOTOR_GEARBOX_TO_TRACK_FACTOR		21.0/15.0		// Factor applied to convert motor gearbox spins to track spin
 #define MOTOR_D_TRACKS_M	                0.448          	// theorical distance between motor tracks 
 #define MOTOR_D_WHEELS_M	                0.650           // theorical distance between motor wheels
@@ -304,7 +304,9 @@ class guardian_controller: public Component {
 		//! Gets the desired linear and angular speed
 		void GetDesiredSpeed(float *linear, float *angular);
 		//! Sets the internal encoders' configuration
-		void SetEncoderConfig(int config, int direction, int angular_dir);
+        void SetEncoderConfig(int config, int direction, int angular_dir);
+        //! Check if is in motion
+        bool InMotion();
     private:
         //!Open serial ports (called by Component::Setup)
         ReturnValue Open();
@@ -375,7 +377,6 @@ class guardian_controller: public Component {
         void ResetErrors();
         //! Returns whether there have been too many R/W errors
         bool IsOnError();
-
         int sleepTime;
 };
 
