@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <launch>
-  
-  <include file="$(find guardian_description)/launch/guardian_state_robot.launch" />
+  <arg name="odometry_type" default="$(optenv ODOMETRY_TYPE wheels)"/>
+  <include file="$(find guardian_description)/launch/guardian_state_robot.launch">
+	<arg name="odometry_type" default="$(arg odometry_type)"/>
+  </include>
   
   <!-- Launches RGBD sensor -->
   <!--include file="$(find guardian_complete)/launch/sensors/xtion_pro.launch"/-->
@@ -23,7 +25,9 @@
   <!--include file="$(find robotnik_tilt_laser)/launch/robotnik_tilt.launch"/-->  
  
   <!-- Launches guardian  node -->
-  <include file="$(find guardian_complete)/launch/guardian_roboteq.launch" />
+  <include file="$(find guardian_complete)/launch/guardian_roboteq.launch">
+	<arg name="odometry_type" default="$(arg odometry_type)"/>
+  </include>
 
   <!-- robot_localization will pubish transform odom->base_footprint -->
   <!--include file="$(find guardian_complete)/launch/robot_localization_odom.launch"/-->
